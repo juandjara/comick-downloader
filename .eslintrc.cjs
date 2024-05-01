@@ -20,6 +20,9 @@ module.exports = {
     es6: true,
   },
   ignorePatterns: ["!**/.server", "!**/.client"],
+  rules: {
+    'semi': ['error', 'never'],
+  },
 
   // Base config
   extends: ["eslint:recommended"],
@@ -81,4 +84,4 @@ module.exports = {
       },
     },
   ],
-};
+}
