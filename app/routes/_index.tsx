@@ -129,18 +129,13 @@ export default function Index() {
 }
 
 function RecentQueries() {
-  const { results, recent } = useLoaderData<typeof loader>()
+  const { recent } = useLoaderData<typeof loader>()
   return (
-    results.length === 0 && (
+    recent.length > 0 && (
       <div className="mt-8">
         <h2 className="text-xl font-medium px-3 mb-2">
           Recent searches
         </h2>
-        {recent.length === 0 && (
-          <p className="px-2 text-gray-500 font-light text-sm">
-            No recent searches
-          </p>
-        )}
         <ul className="divide-y">
           {recent.map((q) => (
             <li key={q}>
@@ -231,10 +226,16 @@ function JobIndicator({ job }: { job: Job<DownloadPayload, string> }) {
   )
   if (job.returnvalue) {
     icon = (
-      <div className="flex gap-2" title={`Downloaded at ${job.returnvalue}`}>
+      <Link
+        download
+        target="_blank"
+        rel="noreferrer noopener"
+        to={`/jobresult/${job.id}`}
+        className="flex gap-2" title={`Downloaded at ${job.returnvalue}`}
+      >
         <p className="text-sm text-gray-500">Completed</p>
         <IconCheck width={24} height={24} className='bg-green-500 text-white p-1 rounded-md block' />
-      </div>
+      </Link>
     )
   }
   if (job.failedReason) {

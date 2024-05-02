@@ -198,10 +198,10 @@ export default function Comic() {
                   {c.vol && (<p>Vol {c.vol}</p>)}
                   {isCompleted(c.hid) ? (
                     <Link
-                      to={`/jobresult/${getJobId(c.hid)}`}
                       download
-                      target='_blank'
-                      rel='noopener noreferrer'
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      to={`/jobresult/${getJobId(c.hid)}`}
                       className={clsx(
                         'hover:bg-green-400 bg-green-500 text-white',
                         'p-1 rounded-md',
