@@ -145,6 +145,10 @@ export default function Comic() {
     })
   }
 
+  function getJobId(chapter_id: string) {
+    return (jobs as Job<DownloadPayload>[]).find((j) => j.data.chapter_id === chapter_id && j.returnvalue)?.id
+  }
+
   return (
     <main className='max-w-screen-lg mx-auto p-4'>
       <Link to='/'>
@@ -183,36 +187,51 @@ export default function Comic() {
             </select>
           </Form>
           {busy && <p className='p-3'>Loading...</p>}
-          <ul className='mt-2 mb-4'>
+          <ul className='mt-2 mb-4 divide-y'>
             {chapters.map((c) => (
-              <li key={c.hid} className='relative p-3 border-b hover:bg-gray-100 transition-colors'>
+              <li key={c.hid} className='relative p-3'>
                 <div className='flex items-center gap-2'>
                   <p className='flex-grow'>
                     <strong className='font-medium'>Ch. {c.chap}</strong>
                     <span className='ml-2 font-light'>{c.title}</span>
                   </p>
                   {c.vol && (<p>Vol {c.vol}</p>)}
-                  <Form className='inline' method='POST'>
-                    <input type='hidden' name='chapter_id' value={c.hid} />
-                    <input type='hidden' name='meta' value={getChapterMeta(c)} />
-                    <button
+                  {isCompleted(c.hid) ? (
+                    <Link
+                      to={`/jobresult/${getJobId(c.hid)}`}
+                      download
+                      target='_blank'
+                      rel='noopener noreferrer'
                       className={clsx(
-                        'p-1 rounded-md bg-gray-200 hover:bg-gray-300 disabled:pointer-events-none disabled:opacity-50',
-                        {
-                          'hover:bg-green-400 bg-green-500 text-white': isCompleted(c.hid),
-                          'hover:bg-red-400 bg-red-500 text-white': isError(c.hid) && !isCompleted(c.hid),
-                        }
+                        'hover:bg-green-400 bg-green-500 text-white',
+                        'p-1 rounded-md',
                       )}
-                      aria-label='download'
-                      title={getTooltip(c.hid)}
-                      type='submit'
-                      name='_action'
-                      value='download'
-                      disabled={busy && isPost}
                     >
-                      {getIcon(c.hid)}
-                    </button>
-                  </Form>
+                      <IconCheck />
+                    </Link>
+                  ) : (
+                    <Form className='inline' method='POST'>
+                      <input type='hidden' name='chapter_id' value={c.hid} />
+                      <input type='hidden' name='meta' value={getChapterMeta(c)} />
+                      <button
+                        className={clsx(
+                          'p-1 rounded-md bg-gray-200 hover:bg-gray-300 disabled:pointer-events-none disabled:opacity-50',
+                          {
+                            'hover:bg-green-400 bg-green-500 text-white': isCompleted(c.hid),
+                            'hover:bg-red-400 bg-red-500 text-white': isError(c.hid) && !isCompleted(c.hid),
+                          }
+                        )}
+                        aria-label='download'
+                        title={getTooltip(c.hid)}
+                        type='submit'
+                        name='_action'
+                        value='download'
+                        disabled={busy && isPost}
+                      >
+                        {getIcon(c.hid)}
+                      </button>
+                    </Form>
+                  )}
                 </div>
                 <div className='flex items-center gap-2'>
                   <p className='flex-grow'>
