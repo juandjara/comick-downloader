@@ -183,7 +183,7 @@ export default function Comic() {
           </h3>
           <p className='mb-1'>{comic.authors.map((a: { name: string }) => a.name).join(', ')}</p>
           <p className='text-sm mb-4'>{comic.demographic}</p>
-          <p className='my-4' dangerouslySetInnerHTML={{ __html: comic.comic.parsed }}></p>
+          <p className='my-4 prose prose-hr:mb-5 prose-hr:mt-0' dangerouslySetInnerHTML={{ __html: comic.comic.parsed }}></p>
           <ul className='flex flex-wrap gap-1 my-4 text-xs'>
             {comic.comic.md_comic_md_genres.map((g: { md_genres: { slug: string; name: string } }) => (
               <li className='bg-gray-200 rounded-md px-1 py-0.5' key={g.md_genres.slug}>{g.md_genres.name}</li>
