@@ -33,6 +33,8 @@ type Chapter = {
 }
 type FullChapter = Chapter & { md_images: ImageProps[] }
 
+const DEFAULT_LIMIT = 20
+
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const id = params.id
   const headerLang = request.headers.get('Accept-Language') || ''
@@ -45,7 +47,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   remoteSP.set('chap', sp.get('q') || '')
   remoteSP.set('chap-order', sp.get('order') || '0')
   remoteSP.set('page', sp.get('page') || '1')
-  remoteSP.set('limit', sp.get('limit') || '20')
+  remoteSP.set('limit', sp.get('limit') || String(DEFAULT_LIMIT))
 
   const [jobs, comic, chapters] = await Promise.all([
     downloadQueue.getJobs(),
@@ -307,7 +309,7 @@ export default function Comic() {
                 'bg-gray-50 hover:bg-gray-100 transition-colors',
                 'disabled:pointer-events-none disabled:opacity-50'
               )}
-              disabled={chapters.length < 20}
+              disabled={chapters.length < DEFAULT_LIMIT}
               onClick={() => updatePage(Number(page) + 1)}
             >
               <p>Next</p>
