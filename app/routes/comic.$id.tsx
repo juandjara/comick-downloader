@@ -148,7 +148,7 @@ export default function Comic() {
   return (
     <main className='max-w-screen-lg mx-auto p-4'>
       <Link to='/'>
-        <button className='flex items-center gap-2 px-2 py-1 mb-2 border rounded-md hover:bg-gray-50'>
+        <button className='flex items-center gap-2 px-2 py-1 mb-2 border rounded-md hover:bg-gray-50 transition-colors'>
           <IconArrowBack />
           <p>Back</p>
         </button>
@@ -156,13 +156,13 @@ export default function Comic() {
       <div className='flex flex-col md:flex-row gap-3 items-start'>
         <Image w={200} h={200} b2key={comic.comic.md_covers[0]?.b2key} />
         <div>
-          <h3 className='text-2xl font-semibold'>
+          <h3 className='text-2xl font-semibold mb-1'>
             {comic.comic.title} <span className='text-sm font-normal'>({comic.comic.year})</span>
           </h3>
-          <p className='text-sm font-normal mb-1'>{comic.authors.map((a: { name: string }) => a.name).join(', ')}</p>
-          <p className='text-sm font-normal mb-3'>{comic.demographic}</p>
-          <p dangerouslySetInnerHTML={{ __html: comic.comic.parsed }}></p>
-          <ul className='flex flex-wrap gap-1 my-3 text-xs'>
+          <p className='mb-1'>{comic.authors.map((a: { name: string }) => a.name).join(', ')}</p>
+          <p className='text-sm mb-4'>{comic.demographic}</p>
+          <p className='my-4' dangerouslySetInnerHTML={{ __html: comic.comic.parsed }}></p>
+          <ul className='flex flex-wrap gap-1 my-4 text-xs'>
             {comic.comic.md_comic_md_genres.map((g: { md_genres: { slug: string; name: string } }) => (
               <li className='bg-gray-200 rounded-md px-1 py-0.5' key={g.md_genres.slug}>{g.md_genres.name}</li>
             ))}
@@ -185,7 +185,7 @@ export default function Comic() {
           {busy && <p className='p-3'>Loading...</p>}
           <ul className='mt-2 mb-4'>
             {chapters.map((c) => (
-              <li key={c.hid} className='relative p-2 border-b hover:bg-gray-100'>
+              <li key={c.hid} className='relative p-3 border-b hover:bg-gray-100 transition-colors'>
                 <div className='flex items-center gap-2'>
                   <p className='flex-grow'>
                     <strong className='font-medium'>Ch. {c.chap}</strong>
