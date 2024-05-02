@@ -28,9 +28,6 @@ WORKDIR /app
 
 COPY --from=deps /app/node_modules /app/node_modules
 
-ADD prisma .
-RUN npx prisma generate
-
 ADD . .
 RUN npm run build
 
