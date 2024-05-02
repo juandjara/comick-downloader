@@ -16,9 +16,9 @@ RUN npm i --production
 
 FROM base as runner
 WORKDIR /app 
-COPY --from=prod-deps --chown=remix:remix /app/package*.json ./
-COPY --from=prod-deps --chown=remix:remix /app/node_modules ./node_modules
-COPY --from=builder --chown=remix:remix /app/build ./build
-COPY --from=builder --chown=remix:remix /app/public ./public
+COPY --from=prod-deps /app/package*.json ./
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=builder /app/build ./build
+COPY --from=builder /app/public ./public
 
 ENTRYPOINT [ "node", "node_modules/.bin/remix-serve", "build/index.js"] 
