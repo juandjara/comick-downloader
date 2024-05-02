@@ -76,9 +76,10 @@ export default function Comic() {
   const transition = useNavigation()
   const busy = transition.state !== 'idle'
   const isPost = transition.formMethod === 'POST'
-  const [sp] = useSearchParams()
+  const [sp, setSearchParams] = useSearchParams()
   const q = sp.get('q') || ''
   const order = sp.get('order') || '0'
+  const page = sp.get('page') || '1'
   const revalidator = useRevalidator()
 
   // revalidate every 1 seconds if there is some active job and there is not another request in progress
@@ -157,6 +158,13 @@ export default function Comic() {
 
   function getJobId(chapter_id: string) {
     return (jobs as Job<DownloadPayload>[]).find((j) => j.data.chapter_id === chapter_id && j.returnvalue)?.id
+  }
+
+  function updatePage(page: number) {
+    setSearchParams((prev) => {
+      prev.set('page', String(page))
+      return prev
+    })
   }
 
   return (
@@ -279,6 +287,33 @@ export default function Comic() {
               </li>
             ))}
           </ul>
+          <div className='flex items-center justify-between gap-2 m-3'>
+            <button
+              className={clsx(
+                'flex items-center gap-1 px-3 py-1 border rounded-md',
+                'bg-gray-50 hover:bg-gray-100 transition-colors',
+                'disabled:pointer-events-none disabled:opacity-50'
+              )}
+              disabled={page <= '1'}
+              onClick={() => updatePage(Number(page) - 1)}
+            >
+              <IconArrowBack />
+              <p>Prev</p>
+            </button>
+            <p>Page {page}</p>
+            <button
+              className={clsx(
+                'flex items-center gap-1 px-3 py-1 border rounded-md',
+                'bg-gray-50 hover:bg-gray-100 transition-colors',
+                'disabled:pointer-events-none disabled:opacity-50'
+              )}
+              disabled={chapters.length < 20}
+              onClick={() => updatePage(Number(page) + 1)}
+            >
+              <p>Next</p>
+              <IconArrowBack className='rotate-180' />
+            </button>
+          </div>
         </div>
       </div>
     </main>
