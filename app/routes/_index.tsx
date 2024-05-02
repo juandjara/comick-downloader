@@ -11,7 +11,7 @@ import { useEffect } from "react"
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Manga-FS-Download" },
+    { title: "Comick Downloader" },
     { name: "description", content: "Download manga from comick.io to your filesystem" },
   ]
 }

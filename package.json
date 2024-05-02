@@ -1,5 +1,5 @@
 {
-  "name": "manga-fs-dl",
+  "name": "comick-downloader",
   "private": true,
   "sideEffects": false,
   "type": "module",
