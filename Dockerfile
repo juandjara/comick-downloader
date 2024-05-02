@@ -1,24 +1,50 @@
+# base node image
 FROM node:20.2.0-alpine3.18 as base
 
-FROM base AS deps
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
+# set for base and all layer that inherit from it
+ENV NODE_ENV production
 
-FROM deps AS builder
+# Install all node_modules, including dev dependencies
+FROM base as deps
+
 WORKDIR /app
-COPY . .
+
+ADD package.json ./
+RUN npm install --include=dev
+
+# Setup production node_modules
+FROM base as production-deps
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules /app/node_modules
+ADD package.json ./
+RUN npm prune --omit=dev
+
+# Build the app
+FROM base as build
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules /app/node_modules
+
+ADD prisma .
+RUN npx prisma generate
+
+ADD . .
 RUN npm run build
 
-FROM deps AS prod-deps
+# Finally, build the production image with minimal footprint
+FROM base
+
+ENV NODE_ENV="production"
+
 WORKDIR /app
-RUN npm i --production
 
-FROM base as runner
-WORKDIR /app 
-COPY --from=prod-deps /app/package*.json ./
-COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=builder /app/build ./build
-COPY --from=builder /app/public ./public
+COPY --from=production-deps /app/node_modules /app/node_modules
 
-ENTRYPOINT [ "node", "node_modules/.bin/remix-serve", "build/index.js"] 
+COPY --from=build /app/build /app/build
+COPY --from=build /app/public /app/public
+COPY --from=build /app/package.json /app/package.json
+
+ENTRYPOINT [ "npm", "start" ]
