@@ -1,5 +1,5 @@
 import Image, { ImageProps } from "@/components/Image"
-import { IconCheck, IconClose } from "@/components/icons"
+import { IconCheck, IconClose, IconSearch } from "@/components/icons"
 import { BASE_URL } from "@/config"
 import { DownloadPayload, downloadQueue } from "@/lib/download-queue.server"
 import { updateRecentQueries, getRecentQueries } from "@/lib/search.server"
@@ -60,12 +60,15 @@ export default function Index() {
 
   return (
     <main className="max-w-screen-lg mx-auto p-4">
+      <h1 className="text-center text-2xl my-4">
+        MFD - Manga FS Downloader
+      </h1>
       <Form>
-        <div>
+        <div className="relative">
           <input
             name="q"
             type="text"
-            className="w-full border border-gray-300 px-3 py-2 rounded-md disabled:bg-gray-100 disabled:pointer-events-none"
+            className="w-full border border-gray-300 pl-3 pr-10 py-2 rounded-md disabled:bg-gray-100 disabled:pointer-events-none"
             placeholder="search titles on comick.io"
             defaultValue={q}
             disabled={busy}
@@ -77,6 +80,23 @@ export default function Index() {
                 <option key={q} value={q} />
               ))}
             </datalist>
+          )}
+          {q ? (
+            <Link to='/' className="absolute right-0 top-0">
+              <button type="button" className="p-2 text-gray-500 hover:bg-gray-100 rounded-md">
+                <IconClose
+                  width={24}
+                  height={24}
+                />
+              </button>
+            </Link>
+          ) : (
+            <button className="absolute right-0 top-0 p-2 text-gray-500 hover:bg-gray-100 rounded-md">
+              <IconSearch
+                width={24}
+                height={24}
+              />
+            </button>
           )}
         </div>
       </Form>
