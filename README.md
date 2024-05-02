@@ -19,7 +19,7 @@ services:
       - /<manga_folder>:/app/storage
     ports:
       - 3000:3000
-    depends_on
+    depends_on:
       - cdl_redis
 
   cdl_redis:
