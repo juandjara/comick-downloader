@@ -41,6 +41,7 @@ type Chapter = {
 
 export const downloadQueue = registerQueue<DownloadPayload>('download', async (job) => {
   const id = job.data.chapter_id
+  const comic_title = job.data.meta.comic_title
   const data = await getJSON<Chapter>(`${BASE_URL}/chapter/${id}`)
 
   const urls = data.chapter.md_images.map((image) => ({
@@ -64,10 +65,11 @@ export const downloadQueue = registerQueue<DownloadPayload>('download', async (j
   }
 
   const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' })
-  const _path = path.join(STORAGE_PATH, `${data.seoTitle}.cbz`)
+  const dir = path.join(STORAGE_PATH, comic_title)
+  const _path = path.join(dir, `${data.seoTitle}.cbz`)
 
-  if (!await fileExists(STORAGE_PATH)) {
-    await fs.mkdir(STORAGE_PATH, { recursive: true })
+  if (!await fileExists(dir)) {
+    await fs.mkdir(dir, { recursive: true })
   }
 
   await fs.writeFile(_path, zipBuffer)
