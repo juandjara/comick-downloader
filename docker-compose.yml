@@ -1,21 +1,23 @@
 version: '3'
 services:
-  redis:
-    container_name: redis
-    hostname: redis
+  # comick-dl:
+  #   build: .
+  #   container_name: comick-downloader
+  #   restart: unless-stopped
+  #   environment:
+  #     - REDIS_URL=cdl_redis:6379
+  #     - STORAGE_PATH=/app/storage
+  #   volumes:
+  #     - ./storage:/app/storage
+  #   ports:
+  #     - 3000:3000
+  #   depends_on:
+  #     - cdl_redis
+
+  cdl_redis:
+    container_name: cdl_redis
+    hostname: cdl_redis
     image: eqalpha/keydb
     restart: unless-stopped
     ports:
-      - "6379:6379"
-
-  redis-commander:
-    container_name: redis-commander
-    hostname: redis-commander
-    image: rediscommander/redis-commander:latest
-    restart: always
-    environment:
-      - REDIS_HOSTS=local:redis:6379
-    ports:
-      - "8081:8081"
-    depends_on:
-      - redis
+      - 6379:6379
