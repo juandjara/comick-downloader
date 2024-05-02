@@ -13,8 +13,8 @@ services:
     container_name: comick-downloader
     restart: unless-stopped
     environment:
-      REDIS_URL=cdl_redis:6379
-      STORAGE_PATH=/app/storage
+      - REDIS_URL=cdl_redis:6379
+      - STORAGE_PATH=/app/storage
     volumes:
       - /<manga_folder>:/app/storage
     ports:
