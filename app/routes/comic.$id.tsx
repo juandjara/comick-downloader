@@ -4,7 +4,7 @@ import { BASE_URL } from '@/config'
 import { type DownloadPayload, downloadQueue, DownloadMeta } from '@/lib/download-queue.server'
 import { getJSON } from '@/request'
 import { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node'
-import { Form, Link, useLoaderData, useNavigation, useRevalidator, useSubmit } from '@remix-run/react'
+import { Form, Link, useLoaderData, useNavigation, useRevalidator, useSearchParams, useSubmit } from '@remix-run/react'
 import { Job } from 'bullmq'
 import clsx from 'clsx'
 import { useEffect } from 'react'
@@ -34,16 +34,23 @@ type Chapter = {
 type FullChapter = Chapter & { md_images: ImageProps[] }
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
+  const id = params.id
   const headerLang = request.headers.get('Accept-Language') || ''
   const headerLangPart = headerLang.split(',')[0].split('-')[0]
-  const spLang = new URL(request.url).searchParams.get('lang')
-  const lang = spLang || headerLangPart || 'en'
-  const id = params.id
+  const sp = new URL(request.url).searchParams
+  const lang = sp.get('lang') || '' || headerLangPart || 'en'
+
+  const remoteSP = new URLSearchParams()
+  remoteSP.set('lang', lang)
+  remoteSP.set('chap', sp.get('q') || '')
+  remoteSP.set('chap-order', sp.get('order') || '0')
+  remoteSP.set('page', sp.get('page') || '1')
+  remoteSP.set('limit', sp.get('limit') || '20')
 
   const [jobs, comic, chapters] = await Promise.all([
     downloadQueue.getJobs(),
     getJSON<Comic>(`${BASE_URL}/comic/${id}`),
-    getJSON<{ chapters: FullChapter[] }>(`${BASE_URL}/comic/${id}/chapters?lang=${lang}`)
+    getJSON<{ chapters: FullChapter[] }>(`${BASE_URL}/comic/${id}/chapters?${remoteSP.toString()}`)
       .then((res) => res.chapters),
   ])
   return { jobs, comic, chapters, lang }
@@ -69,6 +76,9 @@ export default function Comic() {
   const transition = useNavigation()
   const busy = transition.state !== 'idle'
   const isPost = transition.formMethod === 'POST'
+  const [sp] = useSearchParams()
+  const q = sp.get('q') || ''
+  const order = sp.get('order') || '0'
   const revalidator = useRevalidator()
 
   // revalidate every 1 seconds if there is some active job and there is not another request in progress
@@ -172,19 +182,44 @@ export default function Comic() {
             ))}
           </ul>
           <Form onChange={(ev) => submit(ev.currentTarget)} className='py-4'>
-            <label className='mr-2' htmlFor='lang'>Language</label>
-            <select
-              id='lang'
-              name='lang'
-              defaultValue={lang}
-              className='px-2 py-1 rounded-md'
-            >
-              {comic.langList.map((l: string) => (
-                <option key={l} value={l}>
-                  {l}
-                </option>
-              ))}
-            </select>
+            <div>
+              <label className='mr-2' htmlFor='lang'>Language</label>
+              <select
+                id='lang'
+                name='lang'
+                defaultValue={lang}
+                className='px-2 py-1 rounded-md'
+              >
+                {comic.langList.map((l: string) => (
+                  <option key={l} value={l}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className='mt-4 flex items-center gap-2'>
+              <input
+                name="q"
+                type="text"
+                className="max-w-xs border border-gray-300 px-2 py-1 rounded-sm disabled:bg-gray-100 disabled:pointer-events-none"
+                placeholder="Search chapter number"
+                defaultValue={q}
+                disabled={busy}
+              />
+              <div className='flex-grow'></div>
+              <div>
+                <label className='mr-2' htmlFor='order'>Order</label>
+                <select
+                  id='order'
+                  name='order'
+                  defaultValue={order}
+                  className='px-2 py-1 rounded-md'
+                >
+                  <option value="0">⬇️</option>
+                  <option value="1">⬆️</option>
+                </select>
+              </div>
+            </div>
           </Form>
           {busy && <p className='p-3'>Loading...</p>}
           <ul className='mt-2 mb-4 divide-y'>
