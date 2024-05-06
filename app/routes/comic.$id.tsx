@@ -66,7 +66,11 @@ export async function action({ request }: ActionFunctionArgs) {
   const payload = { chapter_id: id, meta } satisfies DownloadPayload
 
   if (action === 'download') {
-    downloadQueue.add(`Download chapter ${id}`, payload)
+    downloadQueue.add(
+      `Download chapter ${id}`,
+      payload,
+      { removeOnComplete: 1000, removeOnFail: 5000 }
+    )
   }
 
   return null

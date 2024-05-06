@@ -22,10 +22,25 @@ export function registerQueue<Payload>(
 
   // Queues store the jobs in the Redis database
   const queue = new BullQueue<Payload>(name, { connection: redis })
+  queue.on('error', (err) => {
+    console.error(`Queue ${name} error:`, err)
+  })
 
   // Workers reach out to our redis connection and pull jobs off the queue
   // jobs are pulled out in a synchronous manner, so jobs are processed one at a time
   const worker = new Worker(name, handler, { connection: redis })
+  worker.on('error', (err) => {
+    console.error(`Worker ${name} error:`, err)
+  })
+
+  ;['SIGINT', 'SIGTERM'].forEach((signal) => {
+    process.on(signal, async () => {
+      console.log(`Received ${signal}, closing server...`)
+      await queue.close()
+      await worker.close()
+      process.exit(0)
+    })
+  })
 
   registeredQueues[name] = { queue, worker }
 
