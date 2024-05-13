@@ -1,0 +1,181 @@
+[
+  { "lang": "All Languages", "native": "All", "code": "all" },
+  {
+    "lang": "English",
+    "native": "English",
+    "code": "en"
+  },
+  {
+    "lang": "Brazilian Portuguese",
+    "native": "português do Brasil",
+    "code": "pt-br"
+  },
+  {
+    "lang": "Russian",
+    "native": "русский язык",
+    "code": "ru"
+  },
+  {
+    "lang": "Spanish Latin American",
+    "native": "español latinoamericano",
+    "code": "es-419"
+  },
+  {
+    "lang": "French",
+    "native": "français, langue française",
+    "code": "fr"
+  },
+  { "lang": "Polish", "native": "polski", "code": "pl" },
+  { "lang": "Turkish", "native": "Türkçe", "code": "tr" },
+  {
+    "lang": "Indonesian",
+    "native": "Bahasa Indonesia",
+    "code": "id"
+  },
+  { "lang": "Italian", "native": "Italiano", "code": "it" },
+  {
+    "lang": "Spanish; Castilian",
+    "native": "español, castellano",
+    "code": "es"
+  },
+  {
+    "lang": "Vietnamese",
+    "native": "Tiếng Việt",
+    "code": "vi"
+  },
+  { "lang": "Arabic", "native": "العربية", "code": "ar" },
+  {
+    "lang": "Hong Kong (Traditional Chinese)",
+    "native": "(Hong Kong) 繁體中文",
+    "code": "zh-hk"
+  },
+  {
+    "lang": "Ukrainian",
+    "native": "українська",
+    "code": "uk"
+  },
+  { "lang": "Hungarian", "native": "Magyar", "code": "hu" },
+  { "lang": "German", "native": "Deutsch", "code": "de" },
+  {
+    "lang": "Chinese",
+    "native": "中文 (Zhōngwén), 汉语, 漢語",
+    "code": "zh"
+  },
+  {
+    "lang": "Korean",
+    "native": "한국어 (韓國語), 조선말 (朝鮮語)",
+    "code": "ko"
+  },
+  { "lang": "Thai", "native": "ไทย", "code": "th" },
+  {
+    "lang": "Catalan; Valencian",
+    "native": "Català",
+    "code": "ca"
+  },
+  {
+    "lang": "Bulgarian",
+    "native": "български език",
+    "code": "bg"
+  },
+  { "lang": "Persian", "native": "فارسی", "code": "fa" },
+  {
+    "lang": "Romanian, Moldavian, Moldovan",
+    "native": "română",
+    "code": "ro"
+  },
+  {
+    "lang": "Czech",
+    "native": "česky, čeština",
+    "code": "cs"
+  },
+  { "lang": "Mongolian", "native": "монгол", "code": "mn" },
+  {
+    "lang": "Portuguese",
+    "native": "Português",
+    "code": "pt"
+  },
+  {
+    "lang": "Hebrew (modern)",
+    "native": "עברית",
+    "code": "he"
+  },
+  {
+    "lang": "Hindi",
+    "native": "हिन्दी, हिंदी",
+    "code": "hi"
+  },
+  {
+    "lang": "Tagalog",
+    "native": "Wikang Tagalog, ᜏᜒᜃᜅ᜔ ᜆᜄᜎᜓᜄ᜔",
+    "code": "tl"
+  },
+  {
+    "lang": "Malay",
+    "native": "bahasa Melayu, بهاس ملايو",
+    "code": "ms"
+  },
+  { "lang": "Kazakh", "native": "Қазақ тілі", "code": "kk" },
+  { "lang": "Burmese", "native": "ဗမာစာ", "code": "my" },
+  {
+    "lang": "Japanese",
+    "native": "日本語 (にほんご／にっぽんご)",
+    "code": "ja"
+  },
+  {
+    "lang": "Dutch",
+    "native": "Nederlands, Vlaams",
+    "code": "nl"
+  },
+  {
+    "lang": "Serbian",
+    "native": "српски језик",
+    "code": "sr"
+  },
+  {
+    "lang": "Greek, Modern",
+    "native": "Ελληνικά",
+    "code": "el"
+  },
+  {
+    "lang": "Esperanto",
+    "native": "Esperanto",
+    "code": "eo"
+  },
+  {
+    "lang": "Finnish",
+    "native": "suomi, suomen kieli",
+    "code": "fi"
+  },
+  {
+    "lang": "Lithuanian",
+    "native": "lietuvių kalba",
+    "code": "lt"
+  },
+  { "lang": "Swedish", "native": "svenska", "code": "sv" },
+  { "lang": "Bengali", "native": "বাংলা", "code": "bn" },
+  { "lang": "Tamil", "native": "தமிழ்", "code": "ta" },
+  { "lang": "Nepali", "native": "नेपाली", "code": "ne" },
+  {
+    "lang": "Latin",
+    "native": "latine, lingua latina",
+    "code": "la"
+  },
+  { "lang": "Croatian", "native": "hrvatski", "code": "hr" },
+  { "lang": "Norwegian", "native": "Norsk", "code": "no" },
+  { "lang": "Georgian", "native": "ქართული", "code": "ka" },
+  { "lang": "Albanian", "native": "Shqip", "code": "sq" },
+  { "lang": "Telugu", "native": "తెలుగు", "code": "te" },
+  {
+    "lang": "Azerbaijani",
+    "native": "azərbaycan dili",
+    "code": "az"
+  },
+  {
+    "lang": "Estonian",
+    "native": "eesti, eesti keel",
+    "code": "et"
+  },
+  { "lang": "Slovak", "native": "slovenčina", "code": "sk" },
+  { "lang": "Danish", "native": "dansk", "code": "da" },
+  { "lang": "Slovene", "native": "slovenščina", "code": "sl" }
+]

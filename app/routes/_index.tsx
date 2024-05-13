@@ -1,13 +1,16 @@
 import Image, { ImageProps } from "@/components/Image"
-import { IconCheck, IconClose, IconSearch } from "@/components/icons"
+import JobList from "@/components/JobList"
+import RecentQueries from "@/components/RecentQueries"
+import { IconClose, IconSearch } from "@/components/icons"
 import { BASE_URL } from "@/config"
-import { DownloadPayload, downloadQueue } from "@/lib/download-queue.server"
+import { STORAGE_PATH } from "@/lib/config.server"
+import { downloadQueue } from "@/lib/download-queue.server"
+import { getFiles, scanQueue } from "@/lib/scan.queue"
 import { updateRecentQueries, getRecentQueries } from "@/lib/search.server"
 import { getJSON } from "@/request"
-import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node"
-import { Form, Link, useLoaderData, useNavigation, useRevalidator, useSearchParams } from "@remix-run/react"
-import { Job } from "bullmq"
-import { useEffect } from "react"
+import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node"
+import { Form, Link, useLoaderData, useNavigation, useSearchParams } from "@remix-run/react"
+import clsx from "clsx"
 
 export const meta: MetaFunction = () => {
   return [
@@ -27,13 +30,15 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const q = new URL(request.url).searchParams.get("q")
   const url = `${BASE_URL}/v1.0/search?q=${q}`
   const recent = await getRecentQueries()
+  const files = await getFiles()
   const jobs = await downloadQueue.getJobs()
 
   if (!q) {
     return {
       results: [],
       recent,
-      jobs
+      jobs,
+      files
     }
   }
 
@@ -45,8 +50,19 @@ export async function loader({ request }: LoaderFunctionArgs) {
   return {
     results,
     recent,
-    jobs
+    jobs,
+    files
   }
+}
+
+export async function action({ request }: ActionFunctionArgs) {
+  const fd = await request.formData()
+  const action = fd.get('_action')
+  if (action === 'scan') {
+    await scanQueue.add('scan', { path: STORAGE_PATH })
+  }
+
+  return { action }
 }
 
 export default function Index() {
@@ -100,9 +116,6 @@ export default function Index() {
           )}
         </div>
       </Form>
-      {busy && (
-        <div className="text-center mt-4">Loading...</div>
-      )}
       {results.length === 0 && !busy && q && (
         <div className="text-center mt-4">No results found</div>
       )}
@@ -124,128 +137,59 @@ export default function Index() {
       )}
       <RecentQueries />
       <JobList />
+      <FSInfo />
     </main>
   )
 }
 
-function RecentQueries() {
-  const { recent } = useLoaderData<typeof loader>()
-  return (
-    recent.length > 0 && (
-      <div className="mt-8">
-        <h2 className="text-xl font-medium px-3 mb-2">
-          Recent searches
-        </h2>
-        <ul className="divide-y">
-          {recent.map((q) => (
-            <li key={q}>
-              <Link
-                to={`/?q=${q}`}
-                className="p-3 flex gap-1 items-center hover:bg-gray-100 transition-colors"
-              >
-                <span className="flex-grow">{q}</span>
-                <IconSearch />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </div>
-    )
-  )
-}
+function FSInfo() {
+  const { files } = useLoaderData<typeof loader>()
+  const { state } = useNavigation()
+  const busy = state !== "idle"
 
-function JobList() {
-  const { jobs } = useLoaderData<typeof loader>()
-  const _jobs = jobs as Job<DownloadPayload, string>[]
-  const transition = useNavigation()
-  const busy = transition.state !== 'idle'
-  const revalidator = useRevalidator()
-
-  // revalidate every 1 seconds if there is some active job and there is not another request in progress
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null
-    const someJobActive = (jobs as Job<DownloadPayload>[]).some((j) => !j.failedReason && !j.returnvalue)
-
-    if (busy) {
-      if (interval) {
-        clearInterval(interval)
-      }
-    } else if (someJobActive) {
-      interval = setInterval(() => {
-        revalidator.revalidate()
-      }, 1000)
-    }
-
-    return () => {
-      if (interval) {
-        clearInterval(interval)
-      }
-    }
-  }, [busy, jobs, revalidator])
+  console.log(files)
 
   return (
-    _jobs.length > 0 && (
-      <div className="mt-8">
-        <h2 className="text-xl font-medium px-3 mb-2">
-          Download queue
+    <div className="mt-8">
+      <header className="flex items-center justify-between">
+        <h2 className="text-xl font-medium px-3 my-3">
+          Filesystem
         </h2>
-        <ul className="divide-y">
-          {_jobs.map((job) => (
-            <li key={job.id} className="p-4 flex items-center gap-2 hover:bg-gray-100 transition-colors">
-              <Link
-                className="flex-grow"
-                to={`/comic/${job.data.meta.comic_id}?lang=${job.data.meta.lang}`}
-              >
-                <p className="mb-1 text-sm text-gray-500">{job.data.meta.comic_title}</p>
-                <p className="mb-1">
-                  <span className="font-medium"> Ch. {job.data.meta.chapter_number} </span>
-                  <span className="text-gray-500">{job.data.meta.chapter_title}</span>
-                </p>
-                <p className="text-xs">{job.data.meta.lang}</p>
-              </Link>
-              <JobIndicator job={job} />
-            </li>
-          ))}
-        </ul>
-      </div>
-    )
-  )
-}
-
-function JobIndicator({ job }: { job: Job<DownloadPayload, string> }) {
-  const progress = typeof job.progress === 'number' ? job.progress : 0
-  let icon = (
-    <div>
-      <p>Downloading... {Math.round(progress * 100)}%</p>
-      <progress
-        className="rounded-md"
-        value={progress}
-        max={1}
-      />
+        <Form method="POST">
+          <button
+            type='submit'
+            name='_action'
+            value='scan'
+            disabled={busy}
+            className={clsx(
+              'px-2 py-1 rounded-md bg-gray-200 hover:bg-gray-300 disabled:pointer-events-none disabled:opacity-50',
+            )}
+          >
+            Scan Filesystem
+          </button>
+        </Form>
+      </header>
+      <ul className="divide-y">
+        {files.map((file) => (
+          <li key={file.name} className="p-4 flex items-stretch gap-2 hover:bg-gray-100 transition-colors">
+            <p>
+              <span>{file.series}</span> / <span className="text-gray-500 text-sm">{file.name}</span>
+            </p>
+            {/* <div className="w-16 h-16 bg-gray-200 rounded-md" />
+            <div className="flex-grow">
+              {file.name}
+            </div>
+            <div>
+              <button className="p-2 text-gray-500 hover:bg-gray-100 transition-colors rounded-md">
+                <IconClose
+                  width={24}
+                  height={24}
+                />
+              </button>
+            </div> */}
+          </li>
+        ))}
+      </ul>
     </div>
   )
-  if (job.returnvalue) {
-    icon = (
-      <Link
-        download
-        target="_blank"
-        rel="noreferrer noopener"
-        to={`/jobresult/${job.id}`}
-        className="flex gap-2" title={`Downloaded at ${job.returnvalue}`}
-      >
-        <p className="text-sm text-gray-500">Completed</p>
-        <IconCheck width={24} height={24} className='bg-green-500 text-white p-1 rounded-md block' />
-      </Link>
-    )
-  }
-  if (job.failedReason) {
-    icon = (
-      <div className="flex gap-2" title={job.failedReason}>
-        <p className="text-sm text-gray-500">Failed</p>
-        <IconClose width={24} height={24} className='bg-red-500 text-white p-1 rounded-md block' />
-      </div>
-    )
-  }
-
-  return icon
 }

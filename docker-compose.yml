@@ -21,3 +21,15 @@ services:
     restart: unless-stopped
     ports:
       - 6379:6379
+
+  cdl_admin:
+    container_name: redis-commander
+    hostname: redis-commander
+    image: rediscommander/redis-commander:latest
+    restart: always
+    environment:
+      - REDIS_HOSTS=local:cdl_redis:6379
+    ports:
+      - 8081:8081
+    depends_on:
+      - cdl_redis

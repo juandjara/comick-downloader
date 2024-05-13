@@ -6,6 +6,7 @@ import { ImageProps } from "@/components/Image"
 import path from 'path'
 import JSZip from "jszip"
 import { Queue } from "bullmq"
+import { STORAGE_PATH } from "./config.server"
 
 async function fileExists(filename: string) {
   try {
@@ -29,8 +30,6 @@ export type DownloadMeta = {
   chapter_number: string
   comic_title: string
 }
-
-const STORAGE_PATH = process.env.STORAGE_PATH || path.join(process.cwd(), './storage')
 
 type Chapter = {
   seoTitle: string
