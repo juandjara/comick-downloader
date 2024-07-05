@@ -43,9 +43,9 @@ export type ScanResult = {
 export async function getFiles() {
   const data = await redis.smembers('files')
   return data.map((d) => JSON.parse(d) as ScanResult).sort((a, b) => {
-    const firstOrder = a.series.localeCompare(b.series)
+    const firstOrder = (a.series || '').localeCompare(b.series || '')
     if (firstOrder === 0) {
-      return Number(b.chapter) - Number(a.chapter)
+      return Number(b.chapter || 0) - Number(a.chapter || 0)
     }
     return firstOrder
   })
