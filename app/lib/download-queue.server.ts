@@ -2,7 +2,6 @@ import { getJSON } from "@/request"
 import { registerQueue } from "./queue.server"
 import { BASE_URL, IMAGE_PREFIX } from "@/config"
 import fs from 'fs/promises'
-import { ImageProps } from "@/components/Image"
 import path from 'path'
 import JSZip from "jszip"
 import { Queue } from "bullmq"
@@ -34,19 +33,24 @@ export type DownloadMeta = {
 type Chapter = {
   seoTitle: string
   chapter: {
-    md_images: ImageProps[]
+    images: { url: string; w: number; h: number }[]
   }
 }
 
 export const downloadQueue = registerQueue<DownloadPayload>('download', async (job) => {
   const id = job.data.chapter_id
   const comic_title = job.data.meta.comic_title
-  const data = await getJSON<Chapter>(`${BASE_URL}/chapter/${id}`)
+  const data = await getJSON<Chapter>(`${BASE_URL}/chapter/${id}?tachiyomi=true`)
 
-  const urls = data.chapter.md_images.map((image) => ({
-    url: `${IMAGE_PREFIX}/${image.b2key}`,
-    key: image.b2key
-  }))
+  console.log('received data: \n', data.chapter.images)
+
+  const urls = data.chapter.images.map((image) => {
+    const key = new URL(image.url).pathname.slice(1)
+    return {
+      url: `${IMAGE_PREFIX}/${key}?tachiyomi=true`,
+      key
+    }
+  })
 
   job.updateProgress(0)
 

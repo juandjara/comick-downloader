@@ -52,7 +52,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
   const [jobs, comic, chapters] = await Promise.all([
     downloadQueue.getJobs(),
-    getJSON<Comic>(`${BASE_URL}/comic/${id}`),
+    getJSON<Comic>(`${BASE_URL}/comic/${id}?tachiyomi=true`),
     getJSON<{ chapters: FullChapter[] }>(`${BASE_URL}/comic/${id}/chapters?${remoteSP.toString()}`)
       .then((res) => res.chapters),
   ])
@@ -70,8 +70,13 @@ export async function action({ request }: ActionFunctionArgs) {
     downloadQueue.add(
       `Download chapter ${id}`,
       payload,
-      { removeOnComplete: 1000, removeOnFail: 5000 }
+      { removeOnComplete: 1000, removeOnFail: 5000, attempts: 3, backoff: { type: 'exponential', delay: 1000 } }
     )
+  }
+  if (action === 'retry') {
+    const jobs = await downloadQueue.getJobs('failed')
+    const job = jobs.find((j) => j.data.chapter_id === id)
+    await job?.retry()
   }
 
   return null
@@ -323,7 +328,7 @@ function ChapterList() {
                   title={getTooltip(c.hid)}
                   type='submit'
                   name='_action'
-                  value='download'
+                  value={isError(c.hid) ? 'retry' : 'download'}
                   disabled={busy && isPost}
                 >
                   {getIcon(c.hid)}

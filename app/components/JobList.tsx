@@ -1,5 +1,5 @@
 import { DownloadPayload } from "@/lib/download-queue.server"
-import { Link, useLoaderData, useNavigation, useRevalidator } from "@remix-run/react"
+import { Form, Link, useLoaderData, useNavigation, useRevalidator } from "@remix-run/react"
 import { Job } from "bullmq"
 import { IconCheck, IconClose, IconLoading } from "./icons"
 import { loader } from '@/routes/_index'
@@ -42,9 +42,23 @@ export default function JobList() {
   return (
     _jobs.length > 0 && (
       <div className="mt-8">
-        <h2 className="text-xl font-medium px-3 mb-2">
-          Recent downloads
-        </h2>
+        <div className="px-3 flex items-center">
+          <h2 className="flex-grow text-xl font-medium mb-2">
+            Recent downloads
+          </h2>
+          <Form className='inline' method='POST'>
+            <button
+              className='flex items-center gap-2 px-2 py-1 border rounded-md hover:bg-gray-50 transition-colors'
+              type="submit"
+              name="_action"
+              value="clear"
+              disabled={busy}
+            >
+              <IconClose />
+              <p>Clear</p>
+            </button>
+          </Form>
+        </div>
         <ul className="divide-y">
           {_jobs.map((job) => (
             <li key={job.id} className="p-4 flex items-center gap-2 hover:bg-gray-100 transition-colors">

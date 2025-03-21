@@ -28,7 +28,7 @@ type SearchResult = {
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const q = new URL(request.url).searchParams.get("q")
-  const url = `${BASE_URL}/v1.0/search?q=${q}`
+  const url = `${BASE_URL}/v1.0/search?q=${q}&tachiyomi=true`
   const recent = await getRecentQueries()
   const files = await getFiles()
   const jobs = await downloadQueue.getJobs()
@@ -61,6 +61,10 @@ export async function action({ request }: ActionFunctionArgs) {
   if (action === 'scan') {
     await scanQueue.add('scan', { path: STORAGE_PATH })
   }
+  if (action === 'clear') {
+    await downloadQueue.clean(30 * 1000, 5000, 'failed')
+    await downloadQueue.clean(30 * 1000, 5000, 'completed')
+  }
 
   return { action }
 }
@@ -75,7 +79,7 @@ export default function Index() {
   const busy = state !== "idle" 
 
   return (
-    <main className="max-w-screen-lg mx-auto p-4">
+    <main className="max-w-screen-lg mx-auto py-4 px-2">
       <h1 className="text-center text-2xl my-4">
         Comick Downloader
       </h1>
@@ -121,15 +125,26 @@ export default function Index() {
       )}
       {results.length > 0 && !busy && (
         <div className="mt-8">
-          <h2 className="text-xl font-medium px-2">
+          <h2 className="text-2xl mb-2">
             Results
           </h2>
-          <ul className="divide-y">
+          <ul>
             {results.map((result) => (
-              <li key={result.hid} className="p-4 my-2 flex items-stretch gap-2 hover:bg-gray-100 transition-colors">
-                <Image w={100} h={100} b2key={result.md_covers[0]?.b2key} />
-                <Link to={`/comic/${result.hid}`} className="flex-grow text-lg font-semibold">{result.title}</Link>
-                <a href={`https://comick.io/comic/${result.slug}`}>Link</a>
+              <li
+                key={result.hid}
+                className="border-t border-gray-300 cursor-pointer relative pb-3 flex items-stretch gap-2 hover:bg-gray-100 transition-colors"
+              >
+                <Link
+                  to={`/comic/${result.hid}`}
+                  className="absolute inset-0 w-full h-full"
+                >
+                  <span className="hidden">{result.title}</span>
+                </Link>
+                <Image w={120} h={120} b2key={result.md_covers[0]?.b2key} />
+                <div className="flex-grow">
+                  <p className="pt-1 text-lg font-semibold">{result.title}</p>
+                  <a className="hover:underline text-xs" href={`https://comick.io/comic/${result.slug}`}>source</a>
+                </div>
               </li>
             ))}
           </ul>
@@ -147,7 +162,7 @@ function FSInfo() {
   const { state } = useNavigation()
   const busy = state !== "idle"
 
-  console.log(files)
+  console.log('Filesystem files: ', files)
 
   return (
     <div className="mt-8">
