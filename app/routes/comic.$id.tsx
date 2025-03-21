@@ -1,8 +1,8 @@
 import Image, { ImageProps } from '@/components/Image'
-import { IconArrowBack, IconCheck, IconClose, IconDownload, IconLoading } from '@/components/icons'
+import { IconArrowBack, IconCheck, IconClose, IconDownload, IconLoading, IconReload } from '@/components/icons'
 import { BASE_URL } from '@/config'
 import { type DownloadPayload, downloadQueue, DownloadMeta } from '@/lib/download-queue.server'
-import { getJSON } from '@/request'
+import { tryGetJSON } from '@/request'
 import { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node'
 import { Form, Link, useLoaderData, useNavigation, useRevalidator, useSearchParams, useSubmit } from '@remix-run/react'
 import { Job } from 'bullmq'
@@ -52,11 +52,16 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
   const [jobs, comic, chapters] = await Promise.all([
     downloadQueue.getJobs(),
-    getJSON<Comic>(`${BASE_URL}/comic/${id}?tachiyomi=true`),
-    getJSON<{ chapters: FullChapter[] }>(`${BASE_URL}/comic/${id}/chapters?${remoteSP.toString()}`)
-      .then((res) => res.chapters),
+    tryGetJSON<Comic, { error: true }>({ error: true }, `${BASE_URL}/comic/${id}?tachiyomi=true`),
+    tryGetJSON<{ chapters: FullChapter[] }>({ chapters: [] }, `${BASE_URL}/comic/${id}/chapters?${remoteSP.toString()}`)
+      // .then((res) => res.chapters),
   ])
-  return { jobs, comic, chapters, lang }
+  return {
+    jobs,
+    comicRequest: comic,
+    chaptersRequest: chapters,
+    lang
+  }
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -83,7 +88,12 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function Comic() {
-  const { comic, chapters, lang } = useLoaderData<typeof loader>()
+  const { comicRequest, chaptersRequest, lang } = useLoaderData<typeof loader>()
+  const hasError = comicRequest.error || chaptersRequest.error
+  const comic = comicRequest.error ? null : comicRequest.data as Comic
+  const chapters = chaptersRequest.data.chapters
+
+  const revalidator = useRevalidator()
   const submit = useSubmit()
   const transition = useNavigation()
   const busy = transition.state !== 'idle'
@@ -93,14 +103,42 @@ export default function Comic() {
   const page = sp.get('page') || '1'
 
   const langs = useMemo(() => {
-    return langOptions.filter((l) => comic.langList.includes(l.code))
-  }, [comic.langList])
+    return comic?.langList
+      ? langOptions.filter((l) => comic.langList.includes(l.code))
+      : []
+  }, [comic?.langList])
 
   function updatePage(page: number) {
     setSearchParams((prev) => {
       prev.set('page', String(page))
       return prev
     })
+  }
+
+  if (hasError || !comic) {
+    return (
+      <main className='max-w-screen-lg mx-auto p-4'>
+        <Link to='/'>
+          <button className='flex items-center gap-2 px-2 py-1 mb-2 border rounded-md hover:bg-gray-50 transition-colors'>
+            <IconArrowBack />
+            <p>Back</p>
+          </button>
+        </Link>
+        <div className="mt-8">
+          <h2 className="text-xl flex-grow mb-2 text-red-700">
+            Error fetching comic results
+          </h2>
+          <button
+            className='flex items-center gap-2 px-2 py-1 border rounded-md hover:bg-gray-50 transition-colors'
+            disabled={busy}
+            onClick={() => revalidator.revalidate()}
+          >
+            <IconReload />
+            <p>Retry</p>
+          </button>
+        </div>
+      </main>
+    )
   }
 
   return (
@@ -204,8 +242,13 @@ export default function Comic() {
   )
 }
 
+// this component will never be renderer on error, so asume all data is ok
 function ChapterList() {
-  const { jobs, comic, chapters, lang } = useLoaderData<typeof loader>()
+  const { jobs, comicRequest, chaptersRequest, lang } = useLoaderData<typeof loader>()
+
+  const comic = comicRequest.data as Comic
+  const chapters = chaptersRequest.data.chapters
+
   const revalidator = useRevalidator()
   const transition = useNavigation()
   const busy = transition.state !== 'idle'

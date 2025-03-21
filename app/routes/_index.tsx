@@ -1,15 +1,15 @@
 import Image, { ImageProps } from "@/components/Image"
 import JobList from "@/components/JobList"
 import RecentQueries from "@/components/RecentQueries"
-import { IconClose, IconSearch } from "@/components/icons"
+import { IconClose, IconReload, IconSearch } from "@/components/icons"
 import { BASE_URL } from "@/config"
 import { STORAGE_PATH } from "@/lib/config.server"
 import { downloadQueue } from "@/lib/download-queue.server"
 import { getFiles, scanQueue } from "@/lib/scan.queue"
 import { updateRecentQueries, getRecentQueries, clearRecentQueries } from "@/lib/search.server"
-import { getJSON } from "@/request"
+import { tryGetJSON, wrapData } from "@/request"
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node"
-import { Form, Link, useLoaderData, useNavigation, useSearchParams } from "@remix-run/react"
+import { Form, Link, useLoaderData, useNavigation, useRevalidator, useSearchParams } from "@remix-run/react"
 import clsx from "clsx"
 
 export const meta: MetaFunction = () => {
@@ -28,14 +28,13 @@ type SearchResult = {
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const q = new URL(request.url).searchParams.get("q")
-  const url = `${BASE_URL}/v1.0/search?q=${q}&tachiyomi=true`
   const recent = await getRecentQueries()
   const files = await getFiles()
   const jobs = await downloadQueue.getJobs()
 
   if (!q) {
     return {
-      results: [],
+      results: wrapData([]),
       recent,
       jobs,
       files
@@ -43,7 +42,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }
 
   const [results] = await Promise.all([
-    getJSON<SearchResult[]>(url),
+    tryGetJSON<SearchResult[]>([], `${BASE_URL}/v1.0/search?q=${q}&tachiyomi=true`),
     updateRecentQueries(q)
   ])
 
@@ -76,7 +75,8 @@ export async function action({ request }: ActionFunctionArgs) {
 
 export default function Index() {
   const { results, recent } = useLoaderData<typeof loader>()
-  
+  const revalidator = useRevalidator()
+
   const [sp] = useSearchParams()
   const q = sp.get("q") || ''
 
@@ -125,16 +125,31 @@ export default function Index() {
           )}
         </div>
       </Form>
-      {results.length === 0 && !busy && q && (
+      {results.data.length === 0 && !busy && q && (
         <div className="text-center mt-4">No results found</div>
       )}
-      {results.length > 0 && !busy && (
+      {results.error ? (
+        <div className="mt-8">
+          <h2 className="text-xl flex-grow mb-2 text-red-700">
+            Error fetching search results
+          </h2>
+          <button
+            className='flex items-center gap-2 px-2 py-1 border rounded-md hover:bg-gray-50 transition-colors'
+            disabled={busy}
+            onClick={() => revalidator.revalidate()}
+          >
+            <IconReload />
+            <p>Retry</p>
+          </button>
+        </div>
+      ) : null}
+      {results.data.length > 0 && !busy && (
         <div className="mt-8">
           <h2 className="text-2xl mb-2">
             Results
           </h2>
           <ul>
-            {results.map((result) => (
+            {results.data.map((result) => (
               <li
                 key={result.hid}
                 className="border-t border-gray-300 cursor-pointer relative pb-3 flex items-stretch gap-2 hover:bg-gray-100 transition-colors"
