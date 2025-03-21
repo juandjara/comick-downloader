@@ -6,7 +6,7 @@ import { BASE_URL } from "@/config"
 import { STORAGE_PATH } from "@/lib/config.server"
 import { downloadQueue } from "@/lib/download-queue.server"
 import { getFiles, scanQueue } from "@/lib/scan.queue"
-import { updateRecentQueries, getRecentQueries } from "@/lib/search.server"
+import { updateRecentQueries, getRecentQueries, clearRecentQueries } from "@/lib/search.server"
 import { getJSON } from "@/request"
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node"
 import { Form, Link, useLoaderData, useNavigation, useSearchParams } from "@remix-run/react"
@@ -61,9 +61,14 @@ export async function action({ request }: ActionFunctionArgs) {
   if (action === 'scan') {
     await scanQueue.add('scan', { path: STORAGE_PATH })
   }
-  if (action === 'clear') {
+  if (action === 'clear-jobs') {
+    // clean last 5000 'failed' jobs in a maximum of 30 seconds
     await downloadQueue.clean(30 * 1000, 5000, 'failed')
+    // clean last 5000 'completed' jobs in a maximum of 30 seconds
     await downloadQueue.clean(30 * 1000, 5000, 'completed')
+  }
+  if (action === 'clear-recent') {
+    await clearRecentQueries()
   }
 
   return { action }
@@ -162,12 +167,10 @@ function FSInfo() {
   const { state } = useNavigation()
   const busy = state !== "idle"
 
-  console.log('Filesystem files: ', files)
-
   return (
     <div className="mt-8">
-      <header className="flex items-center justify-between">
-        <h2 className="text-xl font-medium px-3 my-3">
+      <header className="px-3 my-3 flex items-center justify-between">
+        <h2 className="flex-grow text-xl font-medium">
           Filesystem
         </h2>
         <Form method="POST">
@@ -184,27 +187,30 @@ function FSInfo() {
           </button>
         </Form>
       </header>
-      <ul className="divide-y">
-        {files.map((file) => (
-          <li key={file.name} className="p-4 flex items-stretch gap-2 hover:bg-gray-100 transition-colors">
-            <p>
-              <span>{file.series}</span> / <span className="text-gray-500 text-sm">{file.name}</span>
-            </p>
-            {/* <div className="w-16 h-16 bg-gray-200 rounded-md" />
-            <div className="flex-grow">
-              {file.name}
-            </div>
-            <div>
-              <button className="p-2 text-gray-500 hover:bg-gray-100 transition-colors rounded-md">
-                <IconClose
-                  width={24}
-                  height={24}
-                />
-              </button>
-            </div> */}
-          </li>
-        ))}
-      </ul>
+      <details open>
+        <summary className="px-3 py-1">{files.length} file(s)</summary>
+        <ul className="divide-y">
+          {files.map((file) => (
+            <li key={file.name} className="p-4 flex items-stretch gap-2 hover:bg-gray-100 transition-colors">
+              <p>
+                <span>{file.series}</span> / <span className="text-gray-500 text-sm">{file.name}</span>
+              </p>
+              {/* <div className="w-16 h-16 bg-gray-200 rounded-md" />
+              <div className="flex-grow">
+                {file.name}
+              </div>
+              <div>
+                <button className="p-2 text-gray-500 hover:bg-gray-100 transition-colors rounded-md">
+                  <IconClose
+                    width={24}
+                    height={24}
+                  />
+                </button>
+              </div> */}
+            </li>
+          ))}
+        </ul>
+      </details>
     </div>
   )
 }

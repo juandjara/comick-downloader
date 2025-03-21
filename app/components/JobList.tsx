@@ -42,8 +42,8 @@ export default function JobList() {
   return (
     _jobs.length > 0 && (
       <div className="mt-8">
-        <div className="px-3 flex items-center">
-          <h2 className="flex-grow text-xl font-medium mb-2">
+        <div className="px-3 mb-2 flex items-center">
+          <h2 className="flex-grow text-xl font-medium">
             Recent downloads
           </h2>
           <Form className='inline' method='POST'>
@@ -51,7 +51,7 @@ export default function JobList() {
               className='flex items-center gap-2 px-2 py-1 border rounded-md hover:bg-gray-50 transition-colors'
               type="submit"
               name="_action"
-              value="clear"
+              value="clear-jobs"
               disabled={busy}
             >
               <IconClose />

@@ -8,3 +8,7 @@ export async function getRecentQueries() {
 export async function updateRecentQueries(q: string) {
   await redis.zadd("recentQueries", Date.now(), q)
 }
+
+export async function clearRecentQueries() {
+  await redis.del('recentQueries')
+}
