@@ -6,6 +6,8 @@ import path from 'path'
 import JSZip from "jszip"
 import { Queue } from "bullmq"
 import { STORAGE_PATH } from "./config.server"
+import { getFilenameForChapter } from "./naming"
+import { scanFiles } from "./scan.queue"
 
 async function fileExists(filename: string) {
   try {
@@ -25,9 +27,11 @@ export type DownloadPayload = {
 export type DownloadMeta = {
   lang: string
   comic_id: string
-  chapter_title: string
-  chapter_number: string
   comic_title: string
+  chapter_title: string
+  chapter_number: number
+  vol_number: number
+  fansub_group: string
 }
 
 type Chapter = {
@@ -40,9 +44,8 @@ type Chapter = {
 export const downloadQueue = registerQueue<DownloadPayload>('download', async (job) => {
   const id = job.data.chapter_id
   const comic_title = job.data.meta.comic_title
+  const filename = getFilenameForChapter(job.data.meta)
   const data = await getJSON<Chapter>(`${BASE_URL}/chapter/${id}?tachiyomi=true`)
-
-  console.log('received data: \n', data.chapter.images)
 
   const urls = data.chapter.images.map((image) => {
     const key = new URL(image.url).pathname.slice(1)
@@ -69,12 +72,44 @@ export const downloadQueue = registerQueue<DownloadPayload>('download', async (j
 
   const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' })
   const dir = path.join(STORAGE_PATH, comic_title)
-  const _path = path.join(dir, `${data.seoTitle}.cbz`)
+  const _path = path.join(dir, filename)
 
   if (!await fileExists(dir)) {
     await fs.mkdir(dir, { recursive: true })
   }
 
   await fs.writeFile(_path, zipBuffer)
+  await scanFiles()
+
   return _path
 }) as Queue<DownloadPayload, string>
+
+export async function clearDownloadQueue() {
+  // clean last 5000 'failed' jobs in a maximum of 30 seconds
+  await downloadQueue.clean(30 * 1000, 5000, 'failed')
+  // clean last 5000 'completed' jobs in a maximum of 30 seconds
+  await downloadQueue.clean(30 * 1000, 5000, 'completed')
+}
+
+export async function retryDownload(id: string) {
+  const jobs = await downloadQueue.getJobs('failed')
+  const job = jobs.find((j) => j.data.chapter_id === id)
+  await job?.retry()
+}
+
+export async function downloadChapter(id: string, meta: DownloadMeta) {
+  return downloadQueue.add(
+    `Download chapter ${id}`,
+    { chapter_id: id, meta },
+    {
+      // remove instantly jobs that complete without errors
+      removeOnComplete: true,
+      // keep a max of 10 jobs for 24 hours
+      removeOnFail: { age: 60 * 60 * 24, count: 10 },
+      // retry at most 2 times (after the first attempt, reaching a total 3 attempts)
+      attempts: 3,
+      // attempts will be spaced 1 second, 2 seconds, and 4 seconds respectively
+      backoff: { type: 'exponential', delay: 1000 }
+    }
+  )
+}

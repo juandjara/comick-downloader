@@ -1,10 +1,10 @@
 import { DownloadPayload } from "@/lib/download-queue.server"
-import { Form, Link, useLoaderData, useNavigation, useRevalidator } from "@remix-run/react"
+import { Form, Link, useLoaderData, useNavigation } from "@remix-run/react"
 import { Job } from "bullmq"
 import { IconCheck, IconClose, IconLoading } from "./icons"
 import { loader } from '@/routes/_index'
-import { useEffect } from "react"
 import langs from '@/lib/langs.json'
+import useJobsRevalidator from "@/lib/useJobsRevalidator"
 
 const langMap = Object.fromEntries(
   langs.map((lang) => [lang.code, lang])
@@ -15,29 +15,8 @@ export default function JobList() {
   const _jobs = jobs as Job<DownloadPayload, string>[]
   const transition = useNavigation()
   const busy = transition.state !== 'idle'
-  const revalidator = useRevalidator()
 
-  // revalidate every 1 seconds if there is some active job and there is not another request in progress
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null
-    const someJobActive = (jobs as Job<DownloadPayload>[]).some((j) => !j.failedReason && !j.returnvalue)
-
-    if (busy) {
-      if (interval) {
-        clearInterval(interval)
-      }
-    } else if (someJobActive) {
-      interval = setInterval(() => {
-        revalidator.revalidate()
-      }, 1000)
-    }
-
-    return () => {
-      if (interval) {
-        clearInterval(interval)
-      }
-    }
-  }, [busy, jobs, revalidator])
+  useJobsRevalidator(jobs as Job[])
 
   return (
     _jobs.length > 0 && (

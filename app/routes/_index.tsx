@@ -3,14 +3,14 @@ import JobList from "@/components/JobList"
 import RecentQueries from "@/components/RecentQueries"
 import { IconClose, IconReload, IconSearch } from "@/components/icons"
 import { BASE_URL } from "@/config"
-import { STORAGE_PATH } from "@/lib/config.server"
-import { downloadQueue } from "@/lib/download-queue.server"
-import { getFiles, scanQueue } from "@/lib/scan.queue"
+import { clearDownloadQueue, downloadQueue } from "@/lib/download-queue.server"
+import { getFiles, scanFiles, scanQueue } from "@/lib/scan.queue"
 import { updateRecentQueries, getRecentQueries, clearRecentQueries } from "@/lib/search.server"
+import useJobsRevalidator from "@/lib/useJobsRevalidator"
 import { tryGetJSON, wrapData } from "@/request"
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node"
 import { Form, Link, useLoaderData, useNavigation, useRevalidator, useSearchParams } from "@remix-run/react"
-import clsx from "clsx"
+import { Job } from "bullmq"
 
 export const meta: MetaFunction = () => {
   return [
@@ -31,40 +31,29 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const recent = await getRecentQueries()
   const files = await getFiles()
   const jobs = await downloadQueue.getJobs()
+  const scanJobs = await scanQueue.getJobs('active')
 
-  if (!q) {
-    return {
-      results: wrapData([]),
-      recent,
-      jobs,
-      files
-    }
+  let searchResults = wrapData([] as SearchResult[])
+
+  if (q) {
+    const [results] = await Promise.all([
+      tryGetJSON<SearchResult[]>([], `${BASE_URL}/v1.0/search?q=${q}&tachiyomi=true`),
+      updateRecentQueries(q)
+    ])
+    searchResults = results
   }
 
-  const [results] = await Promise.all([
-    tryGetJSON<SearchResult[]>([], `${BASE_URL}/v1.0/search?q=${q}&tachiyomi=true`),
-    updateRecentQueries(q)
-  ])
-
-  return {
-    results,
-    recent,
-    jobs,
-    files
-  }
+  return { recent, jobs, files, results: searchResults, scanJobs }
 }
 
 export async function action({ request }: ActionFunctionArgs) {
   const fd = await request.formData()
   const action = fd.get('_action')
   if (action === 'scan') {
-    await scanQueue.add('scan', { path: STORAGE_PATH })
+    await scanFiles()
   }
   if (action === 'clear-jobs') {
-    // clean last 5000 'failed' jobs in a maximum of 30 seconds
-    await downloadQueue.clean(30 * 1000, 5000, 'failed')
-    // clean last 5000 'completed' jobs in a maximum of 30 seconds
-    await downloadQueue.clean(30 * 1000, 5000, 'completed')
+    await clearDownloadQueue()
   }
   if (action === 'clear-recent') {
     await clearRecentQueries()
@@ -178,50 +167,40 @@ export default function Index() {
 }
 
 function FSInfo() {
-  const { files } = useLoaderData<typeof loader>()
+  const { files, scanJobs } = useLoaderData<typeof loader>()
   const { state } = useNavigation()
   const busy = state !== "idle"
+  const isScanning = scanJobs.length > 0
+
+  useJobsRevalidator(scanJobs as Job[])
 
   return (
     <div className="mt-8">
       <header className="px-3 my-3 flex items-center justify-between">
         <h2 className="flex-grow text-xl font-medium">
-          Filesystem
+          Files downloaded
         </h2>
         <Form method="POST">
           <button
             type='submit'
             name='_action'
             value='scan'
-            disabled={busy}
-            className={clsx(
-              'px-2 py-1 rounded-md bg-gray-200 hover:bg-gray-300 disabled:pointer-events-none disabled:opacity-50',
-            )}
+            disabled={busy || isScanning}
+            className='flex items-center gap-2 px-2 py-1 border rounded-md hover:bg-gray-50 transition-colors disabled:pointer-events-none disabled:opacity-50'
           >
-            Scan Filesystem
+            <IconSearch />
+            <p>{isScanning ? 'Scanning...' : 'Scan Filesystem'}</p>
           </button>
         </Form>
       </header>
       <details open>
         <summary className="px-3 py-1">{files.length} file(s)</summary>
-        <ul className="divide-y">
+        <ul className="my-2">
           {files.map((file) => (
-            <li key={file.name} className="p-4 flex items-stretch gap-2 hover:bg-gray-100 transition-colors">
-              <p>
-                <span>{file.series}</span> / <span className="text-gray-500 text-sm">{file.name}</span>
-              </p>
-              {/* <div className="w-16 h-16 bg-gray-200 rounded-md" />
-              <div className="flex-grow">
+            <li key={file.name} className="flex items-stretch gap-2 hover:bg-gray-100 transition-colors">
+              <Link className="block w-full p-3" to={`/comic/${file.parts?.comic_id}`}>
                 {file.name}
-              </div>
-              <div>
-                <button className="p-2 text-gray-500 hover:bg-gray-100 transition-colors rounded-md">
-                  <IconClose
-                    width={24}
-                    height={24}
-                  />
-                </button>
-              </div> */}
+              </Link>
             </li>
           ))}
         </ul>

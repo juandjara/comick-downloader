@@ -1,6 +1,7 @@
 import { registerQueue } from './queue.server'
 import fs from 'fs/promises'
 import { redis } from './redis.server'
+import { extractFilenameParts } from './naming'
 import { STORAGE_PATH } from './config.server'
 
 export type ScanPayload = {
@@ -9,19 +10,17 @@ export type ScanPayload = {
 
 export const scanQueue = registerQueue<ScanPayload>('scan', async (job) => {
   job.updateProgress(0)
+  await redis.del('files')
   const files = await fs.readdir(job.data.path, { recursive: true, withFileTypes: true })
   for (const file of files) {
     job.log(`Processing ${file.name}`)
     if (file.isFile()) {
-      // do something with the file
-      const fileRegex = /Chapter (.*) \((.*)\) - (.*)\.cbz$/
-      const matches = file.name.match(fileRegex) || []
+      const parts = extractFilenameParts(file.name)
+      console.log('parts: ', parts)
       const data = {
         path: file.path,
         name: file.name,
-        chapter: matches[1],
-        lang: matches[2],
-        series: matches[3]
+        parts
       }
 
       await redis.sadd('files', JSON.stringify(data))
@@ -35,26 +34,24 @@ export const scanQueue = registerQueue<ScanPayload>('scan', async (job) => {
 export type ScanResult = {
   path: string // dirname
   name: string // filename
-  chapter: string
-  series: string
-  lang: string
+  parts: ReturnType<typeof extractFilenameParts>
 }
 
 export async function getFiles() {
   const data = await redis.smembers('files')
   return data.map((d) => JSON.parse(d) as ScanResult).sort((a, b) => {
-    const firstOrder = (a.series || '').localeCompare(b.series || '')
+    const firstOrder = (a.parts?.comic_title || '').localeCompare(a.parts?.comic_title || '')
     if (firstOrder === 0) {
-      return Number(b.chapter || 0) - Number(a.chapter || 0)
+      return Number(b.parts?.chapter_number || 0) - Number(a.parts?.chapter_number || 0)
     }
     return firstOrder
   })
 }
 
-export async function readStorage() {
-  const files = await fs.readdir(STORAGE_PATH, { recursive: true, withFileTypes: true })
-  return files.filter(f => f.isFile()).map(f => ({
-    path: f.path,
-    name: f.name
-  }))
+export async function scanFiles() {
+  return scanQueue.add('scan', { path: STORAGE_PATH }, {
+    // only store the last scan job, whether it completes or fails
+    removeOnComplete: { count: 1 },
+    removeOnFail: { count: 1 }
+  })
 }

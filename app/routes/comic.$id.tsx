@@ -1,14 +1,16 @@
 import Image, { ImageProps } from '@/components/Image'
 import { IconArrowBack, IconCheck, IconClose, IconDownload, IconLoading, IconReload } from '@/components/icons'
 import { BASE_URL } from '@/config'
-import { type DownloadPayload, downloadQueue, DownloadMeta } from '@/lib/download-queue.server'
+import { type DownloadPayload, downloadQueue, DownloadMeta, retryDownload, downloadChapter } from '@/lib/download-queue.server'
 import { tryGetJSON } from '@/request'
 import { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node'
 import { Form, Link, useLoaderData, useNavigation, useRevalidator, useSearchParams, useSubmit } from '@remix-run/react'
 import { Job } from 'bullmq'
 import clsx from 'clsx'
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import langOptions from '@/lib/langs.json'
+import { getFiles } from '@/lib/scan.queue'
+import useJobsRevalidator from '@/lib/useJobsRevalidator'
 
 type Comic = {
   demographic: string
@@ -50,13 +52,14 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   remoteSP.set('page', sp.get('page') || '1')
   remoteSP.set('limit', sp.get('limit') || String(DEFAULT_LIMIT))
 
-  const [jobs, comic, chapters] = await Promise.all([
+  const [files, jobs, comic, chapters] = await Promise.all([
+    getFiles(),
     downloadQueue.getJobs(),
     tryGetJSON<Comic, { error: true }>({ error: true }, `${BASE_URL}/comic/${id}?tachiyomi=true`),
     tryGetJSON<{ chapters: FullChapter[] }>({ chapters: [] }, `${BASE_URL}/comic/${id}/chapters?${remoteSP.toString()}`)
-      // .then((res) => res.chapters),
   ])
   return {
+    files,
     jobs,
     comicRequest: comic,
     chaptersRequest: chapters,
@@ -69,19 +72,12 @@ export async function action({ request }: ActionFunctionArgs) {
   const action = fd.get('_action')
   const id = fd.get('chapter_id') as string
   const meta = JSON.parse(fd.get('meta') as string) as DownloadMeta
-  const payload = { chapter_id: id, meta } satisfies DownloadPayload
 
   if (action === 'download') {
-    downloadQueue.add(
-      `Download chapter ${id}`,
-      payload,
-      { removeOnComplete: 1000, removeOnFail: 5000, attempts: 3, backoff: { type: 'exponential', delay: 1000 } }
-    )
+    await downloadChapter(id, meta)
   }
   if (action === 'retry') {
-    const jobs = await downloadQueue.getJobs('failed')
-    const job = jobs.find((j) => j.data.chapter_id === id)
-    await job?.retry()
+    await retryDownload(id)
   }
 
   return null
@@ -112,7 +108,7 @@ export default function Comic() {
     setSearchParams((prev) => {
       prev.set('page', String(page))
       return prev
-    })
+    }, { preventScrollReset: true })
   }
 
   if (hasError || !comic) {
@@ -163,7 +159,10 @@ export default function Comic() {
               <li className='bg-gray-200 rounded-md px-1 py-0.5' key={g.md_genres.slug}>{g.md_genres.name}</li>
             ))}
           </ul>
-          <Form onChange={(ev) => submit(ev.currentTarget)} className='py-4'>
+          <Form
+            className='py-4'
+            onChange={(ev) => submit(ev.currentTarget, { preventScrollReset: true })}
+          >
             <div>
               <label className='mr-2' htmlFor='lang'>Language</label>
               <select
@@ -207,7 +206,6 @@ export default function Comic() {
               </div>
             </div>
           </Form>
-          {busy && <p className='p-3'>Loading...</p>}
           <ChapterList />
           <div className='flex items-center justify-between gap-2 m-3'>
             <button
@@ -244,37 +242,16 @@ export default function Comic() {
 
 // this component will never be renderer on error, so asume all data is ok
 function ChapterList() {
-  const { jobs, comicRequest, chaptersRequest, lang } = useLoaderData<typeof loader>()
+  const { files, jobs, comicRequest, chaptersRequest, lang } = useLoaderData<typeof loader>()
 
   const comic = comicRequest.data as Comic
   const chapters = chaptersRequest.data.chapters
 
-  const revalidator = useRevalidator()
   const transition = useNavigation()
   const busy = transition.state !== 'idle'
   const isPost = transition.formMethod === 'POST'
 
-  // revalidate every 1 seconds if there is some active job and there is not another request in progress
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null
-    const someJobActive = (jobs as Job<DownloadPayload>[]).some((j) => !j.failedReason && !j.returnvalue)
-
-    if (busy) {
-      if (interval) {
-        clearInterval(interval)
-      }
-    } else if (someJobActive) {
-      interval = setInterval(() => {
-        revalidator.revalidate()
-      }, 1000)
-    }
-
-    return () => {
-      if (interval) {
-        clearInterval(interval)
-      }
-    }
-  }, [busy, jobs, revalidator])
+  useJobsRevalidator(jobs as Job[])
 
   function isDownloading(id: string) {
     return (jobs as Job<DownloadPayload>[]).some((j) => {
@@ -287,7 +264,10 @@ function ChapterList() {
     })
   }
   function isCompleted(id: string) {
-    return (jobs as Job<DownloadPayload>[]).some((j) => {
+    const c = chapters.find((c) => c.hid === id)
+    const file = c && getFile(c)
+
+    return !!file || (jobs as Job<DownloadPayload>[]).some((j) => {
       return j.data.chapter_id === id && j.returnvalue
     })
   }
@@ -322,14 +302,22 @@ function ChapterList() {
     return JSON.stringify({
       lang,
       comic_id: comic.comic.hid,
+      comic_title: comic.comic.title,
       chapter_title: c.title,
       chapter_number: c.chap,
-      comic_title: comic.comic.title,
+      vol_number: c.vol,
+      fansub_group: c.group_name.join(', ')
     })
   }
 
-  function getJobId(chapter_id: string) {
-    return (jobs as Job<DownloadPayload>[]).find((j) => j.data.chapter_id === chapter_id && j.returnvalue)?.id
+  function getFile(c: Chapter) {
+    const file = files.find((f) => 
+      f.parts?.comic_id === comic.comic.hid &&
+      f.parts.chapter_number === String(c?.chap) &&
+      f.parts.lang === lang &&
+      f.parts.fansub_group === c.group_name.join(', ')
+    )
+    return file && `${comic.comic.title}/${file?.name}`
   }
 
   return (
@@ -347,7 +335,7 @@ function ChapterList() {
                 download
                 target="_blank"
                 rel="noreferrer noopener"
-                to={`/jobresult/${getJobId(c.hid)}`}
+                to={`/download?file=${encodeURIComponent(getFile(c) ?? '')}`}
                 className={clsx(
                   'hover:bg-green-400 bg-green-500 text-white',
                   'p-1 rounded-md',
