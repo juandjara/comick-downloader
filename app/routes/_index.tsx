@@ -1,3 +1,4 @@
+import FSInfo from "@/components/FSInfo"
 import Image, { ImageProps } from "@/components/Image"
 import JobList from "@/components/JobList"
 import RecentQueries from "@/components/RecentQueries"
@@ -6,11 +7,9 @@ import { BASE_URL } from "@/config"
 import { clearDownloadQueue, downloadQueue } from "@/lib/download-queue.server"
 import { getFiles, scanFiles, scanQueue } from "@/lib/scan.queue"
 import { updateRecentQueries, getRecentQueries, clearRecentQueries } from "@/lib/search.server"
-import useJobsRevalidator from "@/lib/useJobsRevalidator"
 import { tryGetJSON, wrapData } from "@/request"
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node"
 import { Form, Link, useLoaderData, useNavigation, useRevalidator, useSearchParams } from "@remix-run/react"
-import { Job } from "bullmq"
 
 export const meta: MetaFunction = () => {
   return [
@@ -163,48 +162,5 @@ export default function Index() {
       <JobList />
       <FSInfo />
     </main>
-  )
-}
-
-function FSInfo() {
-  const { files, scanJobs } = useLoaderData<typeof loader>()
-  const { state } = useNavigation()
-  const busy = state !== "idle"
-  const isScanning = scanJobs.length > 0
-
-  useJobsRevalidator(scanJobs as Job[])
-
-  return (
-    <div className="mt-8">
-      <header className="px-3 my-3 flex items-center justify-between">
-        <h2 className="flex-grow text-xl font-medium">
-          Files downloaded
-        </h2>
-        <Form method="POST">
-          <button
-            type='submit'
-            name='_action'
-            value='scan'
-            disabled={busy || isScanning}
-            className='flex items-center gap-2 px-2 py-1 border rounded-md hover:bg-gray-50 transition-colors disabled:pointer-events-none disabled:opacity-50'
-          >
-            <IconSearch />
-            <p>{isScanning ? 'Scanning...' : 'Scan Filesystem'}</p>
-          </button>
-        </Form>
-      </header>
-      <details open>
-        <summary className="px-3 py-1">{files.length} file(s)</summary>
-        <ul className="my-2">
-          {files.map((file) => (
-            <li key={file.name} className="flex items-stretch gap-2 hover:bg-gray-100 transition-colors">
-              <Link className="block w-full p-3" to={`/comic/${file.parts?.comic_id}`}>
-                {file.name}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </details>
-    </div>
   )
 }
