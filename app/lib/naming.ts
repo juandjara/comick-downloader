@@ -18,7 +18,6 @@ export function getFilenameForChapter(meta: DownloadMeta) {
 
 export function extractFilenameParts(filename: string) {
   const matches = filename.match(FILE_REGEX)
-  console.log('matches: ', matches)
   if (!matches) return null
 
   const [, comic_title, vol_number, chapter_number, chapter_title, lang, fansub_group, comic_id] = matches

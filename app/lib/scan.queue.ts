@@ -16,7 +16,6 @@ export const scanQueue = registerQueue<ScanPayload>('scan', async (job) => {
     job.log(`Processing ${file.name}`)
     if (file.isFile()) {
       const parts = extractFilenameParts(file.name)
-      console.log('parts: ', parts)
       const data = {
         path: file.path,
         name: file.name,
