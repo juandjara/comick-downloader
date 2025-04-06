@@ -1,14 +1,20 @@
 import { Form, Link, useLoaderData, useNavigation } from '@remix-run/react'
 import { type loader } from '../routes/_index'
 import useJobsRevalidator from '@/lib/useJobsRevalidator'
-import { Job } from 'bullmq'
+import { Job, JobJson } from 'bullmq'
 import { IconSearch } from './icons'
 
 export default function FSInfo() {
   const { files, scanJobs } = useLoaderData<typeof loader>()
   const { state } = useNavigation()
   const busy = state !== "idle"
-  const isScanning = scanJobs.length > 0
+
+  console.log(scanJobs)
+
+  // NOTE: scanJobs can contain 1 failed AND 1 completed job
+  const lastJob = (scanJobs as JobJson[]).sort((a, b) => b.timestamp - a.timestamp)[0]
+  const isError = !!lastJob.failedReason
+  const isScanning = !isError && !lastJob.returnvalue
 
   useJobsRevalidator(scanJobs as Job[])
 
@@ -34,6 +40,9 @@ export default function FSInfo() {
           </button>
         </Form>
       </header>
+      {isError ? (
+        <p className='text-red-700 px-3 pb-4'>Error: {lastJob.failedReason}</p>
+      ) : null}
       <details>
         <summary className="px-3 py-1">{matchedFiles.length} file(s) identified</summary>
         <ul className="my-2">

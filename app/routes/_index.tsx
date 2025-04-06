@@ -30,7 +30,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const recent = await getRecentQueries()
   const files = await getFiles()
   const jobs = await downloadQueue.getJobs()
-  const scanJobs = await scanQueue.getJobs('active')
+  const scanJobs = await scanQueue.getJobs()
 
   let searchResults = wrapData([] as SearchResult[])
 

@@ -12,6 +12,8 @@ export const scanQueue = registerQueue<ScanPayload>('scan', async (job) => {
   job.updateProgress(0)
   await redis.del('files')
   const files = await fs.readdir(job.data.path, { recursive: true, withFileTypes: true })
+
+  let totalIdentified = 0
   for (const file of files) {
     job.log(`Processing ${file.name}`)
     if (file.isFile()) {
@@ -22,12 +24,18 @@ export const scanQueue = registerQueue<ScanPayload>('scan', async (job) => {
         parts
       }
 
+      if (parts) {
+        totalIdentified++
+      }
+
       await redis.sadd('files', JSON.stringify(data))
     }
 
     job.updateProgress(files.indexOf(file) / files.length)
   }
   job.updateProgress(1)
+
+  return { totalIdentified, totalRead: files.length }
 })
 
 export type ScanResult = {
