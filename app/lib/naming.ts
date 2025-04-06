@@ -1,6 +1,6 @@
 import type { DownloadMeta } from "./download-queue.server"
 
-export const FILE_REGEX = /^(.*) (Vol\. \d+)?( #\d+)( - .*)? \((.*)\) \[(.*)\]\[(\w+)\].cbz$/
+export const FILE_REGEX = /^(.*)( Vol\. \d+)?( #\d+)( - .*)? \((.*)\) \[(.*)\]\[(\w+)\].cbz$/
 
 export function getFilenameForChapter(meta: DownloadMeta) {
   let base = `${meta.comic_title}`
