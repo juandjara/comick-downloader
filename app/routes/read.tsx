@@ -56,20 +56,23 @@ export default function Read() {
     }
 
     document.addEventListener('keydown', handleKeyPress)
-    return () => document.removeEventListener('keydown', handleKeyPress)
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, isFullscreen])
 
   function goToNext() {
     if (index < files.length - 1) {
       setIndex(index + 1)
-      setShowControls(true)
+      // setShowControls(true)
     }
   }
 
   function goToPrevious() {
     if (index > 0) {
       setIndex(index - 1)
-      setShowControls(true)
+      // setShowControls(true)
     }
   }
 
@@ -104,17 +107,16 @@ export default function Read() {
     }
   }
 
-  function handleTouchStart() {
-    setShowControls(true)
-  }
-
   return (
     <div className="relative w-screen h-screen bg-black overflow-hidden">
       {/* Imagen principal */}
       <div
         className="w-full h-full flex items-center justify-center cursor-pointer"
         onClick={handleImageClick}
-        onTouchStart={handleTouchStart}
+        onDoubleClick={(ev) => {
+          ev.preventDefault()
+          setShowControls((prev) => !prev)
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
@@ -195,33 +197,12 @@ export default function Read() {
             </button>
           </div>
         </div>
-
-        {/* Indicadores de navegación lateral */}
-        <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-16 h-32 pointer-events-auto">
-          <div className="w-full h-full flex items-center justify-start md:justify-center">
-            {index > 0 && (
-              <div className="bg-black/50 rounded-r-lg p-2">
-                <span className="text-white text-xs">←</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-16 h-32 pointer-events-auto">
-          <div className="w-full h-full flex items-center justify-end md:justify-center">
-            {index < files.length - 1 && (
-              <div className="bg-black/50 rounded-l-lg p-2">
-                <span className="text-white text-xs">→</span>
-              </div>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* Indicador de progreso */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-800">
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-pink-500/25">
         <div
-          className="h-full bg-blue-500 transition-all duration-300"
+          className="h-full bg-pink-500 transition-all duration-300"
           style={{ width: `${((index + 1) / files.length) * 100}%` }}
         />
       </div>
