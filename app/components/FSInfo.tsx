@@ -7,14 +7,14 @@ import { IconSearch } from './icons'
 export default function FSInfo() {
   const { files, scanJobs } = useLoaderData<typeof loader>()
   const { state } = useNavigation()
-  const busy = state !== "idle"
-
-  console.log(scanJobs)
+  const busy = state !== 'idle'
 
   // NOTE: scanJobs can contain 1 failed AND 1 completed job
-  const lastJob = (scanJobs as JobJson[]).sort((a, b) => b.timestamp - a.timestamp)[0]
-  const isError = !!lastJob.failedReason
-  const isScanning = !isError && !lastJob.returnvalue
+  const lastJob = (scanJobs as JobJson[]).sort(
+    (a, b) => b.timestamp - a.timestamp,
+  )[0]
+  const isError = !!lastJob?.failedReason
+  const isScanning = !isError && !lastJob?.returnvalue
 
   useJobsRevalidator(scanJobs as Job[])
 
@@ -24,16 +24,14 @@ export default function FSInfo() {
   return (
     <div className="mt-8">
       <header className="px-3 my-3 flex items-center justify-between">
-        <h2 className="flex-grow text-xl font-medium">
-          Files downloaded
-        </h2>
+        <h2 className="flex-grow text-xl font-medium">Files downloaded</h2>
         <Form method="POST">
           <button
-            type='submit'
-            name='_action'
-            value='scan'
+            type="submit"
+            name="_action"
+            value="scan"
             disabled={busy || isScanning}
-            className='flex items-center gap-2 px-2 py-1 border rounded-md hover:bg-gray-50 transition-colors disabled:pointer-events-none disabled:opacity-50'
+            className="flex items-center gap-2 px-2 py-1 border rounded-md hover:bg-gray-50 transition-colors disabled:pointer-events-none disabled:opacity-50"
           >
             <IconSearch />
             <p>{isScanning ? 'Scanning...' : 'Scan Filesystem'}</p>
@@ -41,26 +39,36 @@ export default function FSInfo() {
         </Form>
       </header>
       {isError ? (
-        <p className='text-red-700 px-3 pb-4'>Error: {lastJob.failedReason}</p>
+        <p className="text-red-700 px-3 pb-4">Error: {lastJob.failedReason}</p>
       ) : null}
       <details>
-        <summary className="px-3 py-1">{matchedFiles.length} file(s) identified</summary>
+        <summary className="px-3 py-1">
+          {matchedFiles.length} file(s) identified
+        </summary>
         <ul className="my-2">
           {matchedFiles.map((file) => (
-            <li key={file.name} className="flex items-stretch gap-2 hover:bg-gray-100 transition-colors">
-              <Link className="block w-full p-3" to={`/comic/${file.parts?.comic_id}`}>
+            <li
+              key={file.name}
+              className="flex items-stretch gap-2 hover:bg-gray-100 transition-colors"
+            >
+              <Link
+                className="block w-full p-3"
+                to={`/comic/${file.parts?.comic_id}`}
+              >
                 {file.name}
               </Link>
             </li>
           ))}
         </ul>
       </details>
-      <details className='my-3'>
-        <summary className='px-3 py-1'>{unmatchedFiles.length} file(s) not identified</summary>
-        <ul className='my-2'>
+      <details className="my-3">
+        <summary className="px-3 py-1">
+          {unmatchedFiles.length} file(s) not identified
+        </summary>
+        <ul className="my-2">
           {unmatchedFiles.map((file) => (
             <li key={file.name}>
-              <p className='p-3'>{file.name}</p>
+              <p className="p-3">{file.name}</p>
             </li>
           ))}
         </ul>
