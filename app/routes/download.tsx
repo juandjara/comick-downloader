@@ -1,4 +1,4 @@
-import { processFileParam } from '@/lib/process-file-param.server'
+import processFileParam from '@/lib/process-file-param.server'
 import {
   LoaderFunctionArgs,
   createReadableStreamFromReadable,
