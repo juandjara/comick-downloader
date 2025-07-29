@@ -1,7 +1,8 @@
+import { IconDownload, IconFullscreen } from '@/components/icons'
 import processFileParam from '@/lib/process-file-param.server'
 import { unzipCbz } from '@/lib/unzip-cbz.server'
 import { LoaderFunctionArgs } from '@remix-run/node'
-import { useLoaderData } from '@remix-run/react'
+import { Link, useLoaderData, useSearchParams } from '@remix-run/react'
 import { useState, useEffect } from 'react'
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -16,6 +17,8 @@ export default function Read() {
   const [showControls, setShowControls] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const file = files[index]
+  const [searchParams] = useSearchParams()
+  const fileParam = encodeURIComponent(searchParams.get('file') || '')
 
   // Ocultar controles automáticamente después de 3 segundos
   useEffect(() => {
@@ -107,22 +110,26 @@ export default function Read() {
     }
   }
 
+  function handleDoubleClick(e: React.MouseEvent) {
+    e.preventDefault()
+    setShowControls((prev) => !prev)
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === 'Enter' || e.key === 'Space') {
+      e.preventDefault()
+      setShowControls((prev) => !prev)
+    }
+  }
+
   return (
     <div className="relative w-screen h-screen bg-black overflow-hidden">
       {/* Imagen principal */}
       <div
         className="w-full h-full flex items-center justify-center cursor-pointer"
         onClick={handleImageClick}
-        onDoubleClick={(ev) => {
-          ev.preventDefault()
-          setShowControls((prev) => !prev)
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            setShowControls((prev) => !prev)
-          }
-        }}
+        onDoubleClick={handleDoubleClick}
+        onKeyDown={handleKeyDown}
         role="button"
         tabIndex={0}
         aria-label="Navegar por la imagen"
@@ -142,7 +149,14 @@ export default function Read() {
         }`}
       >
         {/* Barra superior */}
-        <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/80 to-transparent pointer-events-auto">
+        <div
+          className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/80 to-transparent pointer-events-auto"
+          aria-label="Barra superior"
+          role="button"
+          tabIndex={0}
+          onClick={() => setShowControls((prev) => !prev)}
+          onKeyDown={handleKeyDown}
+        >
           <div className="flex items-center justify-between px-4 py-2">
             <div className="flex items-center space-x-4">
               <button
@@ -156,19 +170,36 @@ export default function Read() {
               </span>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-x-2">
+              <Link
+                to={`/download?file=${fileParam}`}
+                className="text-white hover:text-gray-300 transition-colors p-2"
+                aria-label="Descargar"
+                title="Descargar"
+              >
+                <IconDownload />
+              </Link>
               <button
+                title="Pantalla completa"
+                aria-label="Pantalla completa"
                 onClick={toggleFullscreen}
                 className="text-white hover:text-gray-300 transition-colors p-2"
               >
-                {isFullscreen ? '⛶' : '⛶'}
+                <IconFullscreen />
               </button>
             </div>
           </div>
         </div>
 
         {/* Barra inferior */}
-        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black/80 to-transparent pointer-events-auto">
+        <div
+          className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black/80 to-transparent pointer-events-auto"
+          aria-label="Barra inferior"
+          role="button"
+          tabIndex={0}
+          onClick={() => setShowControls((prev) => !prev)}
+          onKeyDown={handleKeyDown}
+        >
           <div className="flex items-center justify-between px-4 py-2">
             <button
               onClick={goToPrevious}
