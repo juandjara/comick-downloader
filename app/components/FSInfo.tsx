@@ -14,7 +14,7 @@ export default function FSInfo() {
     (a, b) => b.timestamp - a.timestamp,
   )[0]
   const isError = !!lastJob?.failedReason
-  const isScanning = !isError && !lastJob?.returnvalue
+  const isScanning = lastJob && !lastJob?.returnvalue && !lastJob?.failedReason
 
   useJobsRevalidator(scanJobs as Job[])
 
