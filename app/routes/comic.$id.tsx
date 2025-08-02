@@ -373,7 +373,7 @@ function ChapterList() {
         f.parts.lang === lang &&
         f.parts.fansub_group === c.group_name.join(', '),
     )
-    return file && `${comic.comic.title}/${file?.name}`
+    return file && `${file.path}/${file.name}`
   }
 
   return (
