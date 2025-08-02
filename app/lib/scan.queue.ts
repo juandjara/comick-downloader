@@ -46,7 +46,13 @@ export type ScanResult = {
 
 export async function getFiles() {
   const data = await redis.smembers('files')
-  return data.map((d) => JSON.parse(d) as ScanResult).sort((a, b) => {
+  return data.map((d) => {
+    const data = JSON.parse(d) as ScanResult
+    return {
+      ...data,
+      path: data.path.replace(STORAGE_PATH, ''),
+    }
+  }).sort((a, b) => {
     const firstOrder = (a.parts?.comic_title || '').localeCompare(a.parts?.comic_title || '')
     if (firstOrder === 0) {
       return Number(b.parts?.chapter_number || 0) - Number(a.parts?.chapter_number || 0)
