@@ -3,6 +3,7 @@ import { type loader } from '../routes/_index'
 import useJobsRevalidator from '@/lib/useJobsRevalidator'
 import { Job, JobJson } from 'bullmq'
 import { IconSearch } from './icons'
+import { type ScanResult } from '@/lib/scan.queue'
 
 export default function FSInfo() {
   const { files, scanJobs } = useLoaderData<typeof loader>()
@@ -20,6 +21,10 @@ export default function FSInfo() {
 
   const matchedFiles = files.filter((f) => f.parts)
   const unmatchedFiles = files.filter((f) => !f.parts)
+
+  function getFilePath(file: Partial<ScanResult>) {
+    return encodeURIComponent(`${file.path}/${file.name}`)
+  }
 
   return (
     <div className="mt-8">
@@ -53,7 +58,7 @@ export default function FSInfo() {
             >
               <Link
                 className="block w-full p-3"
-                to={`/comic/${file.parts?.comic_id}`}
+                to={`/read?file=${getFilePath(file)}`}
               >
                 {file.name}
               </Link>
