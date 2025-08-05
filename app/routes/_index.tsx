@@ -1,20 +1,40 @@
-import FSInfo from "@/components/FSInfo"
-import Image, { ImageProps } from "@/components/Image"
-import JobList from "@/components/JobList"
-import RecentQueries from "@/components/RecentQueries"
-import { IconClose, IconReload, IconSearch } from "@/components/icons"
-import { BASE_URL } from "@/config"
-import { clearDownloadQueue, downloadQueue } from "@/lib/download-queue.server"
-import { getFiles, scanFiles, scanQueue } from "@/lib/scan.queue"
-import { updateRecentQueries, getRecentQueries, clearRecentQueries } from "@/lib/search.server"
-import { tryGetJSON, wrapData } from "@/request"
-import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node"
-import { Form, Link, useLoaderData, useNavigation, useRevalidator, useSearchParams } from "@remix-run/react"
+import FSInfo from '@/components/FSInfo'
+import Image, { ImageProps } from '@/components/Image'
+import JobList from '@/components/JobList'
+import LastRead from '@/components/LastRead'
+import RecentQueries from '@/components/RecentQueries'
+import { IconClose, IconReload, IconSearch } from '@/components/icons'
+import { BASE_URL } from '@/config'
+import { clearDownloadQueue, downloadQueue } from '@/lib/download-queue.server'
+import { clearLastRead, getLastRead } from '@/lib/lastread.server'
+import { getFiles, scanFiles, scanQueue } from '@/lib/scan.queue'
+import {
+  updateRecentQueries,
+  getRecentQueries,
+  clearRecentQueries,
+} from '@/lib/search.server'
+import { tryGetJSON, wrapData } from '@/request'
+import type {
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+  MetaFunction,
+} from '@remix-run/node'
+import {
+  Form,
+  Link,
+  useLoaderData,
+  useNavigation,
+  useRevalidator,
+  useSearchParams,
+} from '@remix-run/react'
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Comick Downloader" },
-    { name: "description", content: "Download manga from comick.io to your filesystem" },
+    { title: 'Comick Downloader' },
+    {
+      name: 'description',
+      content: 'Download manga from comick.io to your filesystem',
+    },
   ]
 }
 
@@ -26,8 +46,9 @@ type SearchResult = {
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const q = new URL(request.url).searchParams.get("q")
+  const q = new URL(request.url).searchParams.get('q')
   const recent = await getRecentQueries()
+  const lastRead = await getLastRead()
   const files = await getFiles()
   const jobs = await downloadQueue.getJobs()
   const scanJobs = await scanQueue.getJobs()
@@ -36,13 +57,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   if (q) {
     const [results] = await Promise.all([
-      tryGetJSON<SearchResult[]>([], `${BASE_URL}/v1.0/search?q=${q}&tachiyomi=true`),
-      updateRecentQueries(q)
+      tryGetJSON<SearchResult[]>(
+        [],
+        `${BASE_URL}/v1.0/search?q=${q}&tachiyomi=true`,
+      ),
+      updateRecentQueries(q),
     ])
     searchResults = results
   }
 
-  return { recent, jobs, files, results: searchResults, scanJobs }
+  return { lastRead, recent, jobs, files, results: searchResults, scanJobs }
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -57,6 +81,9 @@ export async function action({ request }: ActionFunctionArgs) {
   if (action === 'clear-recent') {
     await clearRecentQueries()
   }
+  if (action === 'clear-lastread') {
+    await clearLastRead()
+  }
 
   return { action }
 }
@@ -66,16 +93,14 @@ export default function Index() {
   const revalidator = useRevalidator()
 
   const [sp] = useSearchParams()
-  const q = sp.get("q") || ''
+  const q = sp.get('q') || ''
 
   const { state } = useNavigation()
-  const busy = state !== "idle" 
+  const busy = state !== 'idle'
 
   return (
     <main className="max-w-screen-lg mx-auto py-4 px-2">
-      <h1 className="text-center text-2xl my-4">
-        Comick Downloader
-      </h1>
+      <h1 className="text-center text-2xl my-4">Comick Downloader</h1>
       <Form>
         <div className="relative">
           <input
@@ -85,7 +110,7 @@ export default function Index() {
             placeholder="search titles on comick.io"
             defaultValue={q}
             disabled={busy}
-            list={recent.length > 0 ? "recent-queries" : undefined}
+            list={recent.length > 0 ? 'recent-queries' : undefined}
           />
           {recent.length > 0 && (
             <datalist id="recent-queries">
@@ -95,20 +120,17 @@ export default function Index() {
             </datalist>
           )}
           {q ? (
-            <Link to='/' className="absolute right-0 top-0">
-              <button type="button" className="p-2 text-gray-500 hover:bg-gray-100 transition-colors rounded-md">
-                <IconClose
-                  width={24}
-                  height={24}
-                />
+            <Link to="/" className="absolute right-0 top-0">
+              <button
+                type="button"
+                className="p-2 text-gray-500 hover:bg-gray-100 transition-colors rounded-md"
+              >
+                <IconClose width={24} height={24} />
               </button>
             </Link>
           ) : (
             <button className="absolute right-0 top-0 p-2 text-gray-500 hover:bg-gray-100 rounded-md">
-              <IconSearch
-                width={24}
-                height={24}
-              />
+              <IconSearch width={24} height={24} />
             </button>
           )}
         </div>
@@ -122,7 +144,7 @@ export default function Index() {
             Error fetching search results
           </h2>
           <button
-            className='flex items-center gap-2 px-2 py-1 border rounded-md hover:bg-gray-50 transition-colors'
+            className="flex items-center gap-2 px-2 py-1 border rounded-md hover:bg-gray-50 transition-colors"
             disabled={busy}
             onClick={() => revalidator.revalidate()}
           >
@@ -131,11 +153,9 @@ export default function Index() {
           </button>
         </div>
       ) : null}
-      {results.data.length > 0 && !busy && (
+      {results.data.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-2xl mb-2">
-            Results
-          </h2>
+          <h2 className="text-2xl mb-2">Results</h2>
           <ul>
             {results.data.map((result) => (
               <li
@@ -151,13 +171,19 @@ export default function Index() {
                 <Image w={120} h={120} b2key={result.md_covers[0]?.b2key} />
                 <div className="flex-grow">
                   <p className="pt-1 text-lg font-semibold">{result.title}</p>
-                  <a className="hover:underline text-xs" href={`https://comick.io/comic/${result.slug}`}>source</a>
+                  <a
+                    className="hover:underline text-xs"
+                    href={`https://comick.io/comic/${result.slug}`}
+                  >
+                    source
+                  </a>
                 </div>
               </li>
             ))}
           </ul>
         </div>
       )}
+      <LastRead />
       <RecentQueries />
       <JobList />
       <FSInfo />

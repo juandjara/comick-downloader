@@ -1,4 +1,5 @@
 import { IconDownload, IconFullscreen } from '@/components/icons'
+import { updateLastRead } from '@/lib/lastread.server'
 import processFileParam from '@/lib/process-file-param.server'
 import { unzipCbz } from '@/lib/unzip-cbz.server'
 import { LoaderFunctionArgs } from '@remix-run/node'
@@ -7,7 +8,10 @@ import { useState, useEffect } from 'react'
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const filepath = await processFileParam(request, 'file')
-  const files = await unzipCbz(filepath)
+  const [files] = await Promise.all([
+    unzipCbz(filepath),
+    updateLastRead(filepath),
+  ])
   return { files }
 }
 
