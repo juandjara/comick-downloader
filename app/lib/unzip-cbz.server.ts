@@ -1,7 +1,13 @@
 import fs from "fs/promises"
 import JSZip from "jszip"
+import { redis } from "./redis.server"
 
 export async function unzipCbz(path: string) {
+  const cached = await redis.get(`cbz:${path}`)
+  if (cached) {
+    return JSON.parse(cached)
+  }
+
   const buf = await fs.readFile(path)
   const zip = new JSZip()
   await zip.loadAsync(buf as Uint8Array)
@@ -13,10 +19,13 @@ export async function unzipCbz(path: string) {
     }
   })
   const files = await Promise.all(promises)
-  return files.map((f, i) => {
+  const result = files.map((f, i) => {
     return {
       name: Object.keys(zip.files)[i],
       base64: f,
     }
   })
+  // cache for 1 day
+  await redis.set(`cbz:${path}`, JSON.stringify(result), 'EX', 60 * 60 * 24)
+  return result
 }
