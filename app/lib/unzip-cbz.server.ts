@@ -5,7 +5,7 @@ import { redis } from "./redis.server"
 export async function unzipCbz(path: string) {
   const cached = await redis.get(`cbz:${path}`)
   if (cached) {
-    return JSON.parse(cached)
+    return JSON.parse(cached) as { name: string, base64: string }[]
   }
 
   const buf = await fs.readFile(path)

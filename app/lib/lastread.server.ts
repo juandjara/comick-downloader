@@ -1,3 +1,4 @@
+import { STORAGE_PATH } from "./config.server"
 import { redis } from "./redis.server"
 
 export async function getLastRead() {
@@ -6,7 +7,7 @@ export async function getLastRead() {
 }
 
 export async function updateLastRead(path: string) {
-  await redis.zadd("lastRead", Date.now(), path)
+  await redis.zadd("lastRead", Date.now(), path.replace(STORAGE_PATH, ''))
 }
 
 export async function clearLastRead() {

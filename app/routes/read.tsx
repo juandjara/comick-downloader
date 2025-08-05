@@ -1,26 +1,34 @@
-import { IconDownload, IconFullscreen } from '@/components/icons'
+import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconDownload,
+  IconFullscreen,
+} from '@/components/icons'
 import { updateLastRead } from '@/lib/lastread.server'
 import processFileParam from '@/lib/process-file-param.server'
+import { getFiles } from '@/lib/scan.queue'
 import { unzipCbz } from '@/lib/unzip-cbz.server'
 import { LoaderFunctionArgs } from '@remix-run/node'
 import { Link, useLoaderData, useSearchParams } from '@remix-run/react'
-import { useState, useEffect } from 'react'
+import clsx from 'clsx'
+import { useState, useEffect, useMemo } from 'react'
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const filepath = await processFileParam(request, 'file')
-  const [files] = await Promise.all([
+  const [images, files] = await Promise.all([
     unzipCbz(filepath),
+    getFiles(),
     updateLastRead(filepath),
   ])
-  return { files }
+  return { images, files }
 }
 
 export default function Read() {
-  const { files } = useLoaderData<typeof loader>()
+  const { images, files } = useLoaderData<typeof loader>()
   const [index, setIndex] = useState(0)
   const [showControls, setShowControls] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const file = files[index]
+  const image = images[index]
   const [searchParams] = useSearchParams()
   const fileParam = encodeURIComponent(searchParams.get('file') || '')
 
@@ -70,7 +78,7 @@ export default function Read() {
   }, [index, isFullscreen])
 
   function goToNext() {
-    if (index < files.length - 1) {
+    if (index < images.length - 1) {
       setIndex(index + 1)
       // setShowControls(true)
     }
@@ -82,6 +90,56 @@ export default function Read() {
       // setShowControls(true)
     }
   }
+
+  const nextChapterLink = useMemo(() => {
+    const currentFile = files.find(
+      (f) => fileParam === encodeURIComponent(`${f.path}/${f.name}`),
+    )
+    if (!currentFile) {
+      return null
+    }
+
+    const nextFile = files.find((f) => {
+      const idCheck = f.parts?.comic_id === currentFile.parts?.comic_id
+      const chapterCheck =
+        Number(f.parts?.chapter_number || 0) ===
+        Number(currentFile.parts?.chapter_number || 0) + 1
+      return idCheck && chapterCheck
+    })
+
+    if (!nextFile) {
+      return null
+    }
+
+    return `/read?file=${encodeURIComponent(
+      `${nextFile.path}/${nextFile.name}`,
+    )}`
+  }, [files, fileParam])
+
+  const previousChapterLink = useMemo(() => {
+    const currentFile = files.find(
+      (f) => fileParam === encodeURIComponent(`${f.path}/${f.name}`),
+    )
+    if (!currentFile) {
+      return null
+    }
+
+    const previousFile = files.find((f) => {
+      const idCheck = f.parts?.comic_id === currentFile.parts?.comic_id
+      const chapterCheck =
+        Number(f.parts?.chapter_number || 0) ===
+        Number(currentFile.parts?.chapter_number || 0) - 1
+      return idCheck && chapterCheck
+    })
+
+    if (!previousFile) {
+      return null
+    }
+
+    return `/read?file=${encodeURIComponent(
+      `${previousFile.path}/${previousFile.name}`,
+    )}`
+  }, [files, fileParam])
 
   function toggleFullscreen() {
     if (!document.fullscreenElement) {
@@ -139,8 +197,8 @@ export default function Read() {
         aria-label="Navegar por la imagen"
       >
         <img
-          src={`data:image/jpeg;base64,${file.base64}`}
-          alt={file.name}
+          src={`data:image/jpeg;base64,${image.base64}`}
+          alt={image.name}
           className="max-w-full max-h-full object-contain select-none"
           draggable={false}
         />
@@ -170,11 +228,37 @@ export default function Read() {
                 ← Volver
               </button>
               <span className="text-white text-sm">
-                {index + 1} / {files.length}
+                {index + 1} / {images.length}
               </span>
             </div>
 
             <div className="flex items-center gap-x-2">
+              <Link
+                to={previousChapterLink || ''}
+                className={clsx(
+                  'text-white hover:text-gray-300 transition-colors p-2',
+                  previousChapterLink
+                    ? 'opacity-100'
+                    : 'opacity-50 pointer-events-none',
+                )}
+                aria-label="Anterior capítulo"
+                title="Anterior capítulo"
+              >
+                <IconChevronLeft />
+              </Link>
+              <Link
+                to={nextChapterLink || ''}
+                className={clsx(
+                  'text-white hover:text-gray-300 transition-colors p-2',
+                  nextChapterLink
+                    ? 'opacity-100'
+                    : 'opacity-50 pointer-events-none',
+                )}
+                aria-label="Siguiente capítulo"
+                title="Siguiente capítulo"
+              >
+                <IconChevronRight />
+              </Link>
               <Link
                 to={`/download?file=${fileParam}`}
                 className="text-white hover:text-gray-300 transition-colors p-2"
@@ -214,16 +298,11 @@ export default function Read() {
             >
               ← Anterior
             </button>
-
-            <div className="flex items-center space-x-2">
-              <span className="text-white text-sm">{file.name}</span>
-            </div>
-
             <button
               onClick={goToNext}
-              disabled={index === files.length - 1}
+              disabled={index === images.length - 1}
               className={`text-white hover:text-gray-300 transition-colors p-2 ${
-                index === files.length - 1
+                index === images.length - 1
                   ? 'opacity-50 cursor-not-allowed'
                   : ''
               }`}
@@ -238,7 +317,7 @@ export default function Read() {
       <div className="absolute bottom-0 left-0 right-0 h-1 bg-pink-500/25">
         <div
           className="h-full bg-pink-500 transition-all duration-300"
-          style={{ width: `${((index + 1) / files.length) * 100}%` }}
+          style={{ width: `${((index + 1) / images.length) * 100}%` }}
         />
       </div>
     </div>
