@@ -25,14 +25,20 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 export default function Read() {
   const { images, files } = useLoaderData<typeof loader>()
-  const [index, setIndex] = useState(0)
+  const [params, setParas] = useSearchParams({ index: '0' })
+  const index = Number(params.get('index'))
+
+  function setIndex(index: number) {
+    params.set('index', index.toString())
+    setParas(params)
+  }
+
   const [showControls, setShowControls] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const image = images[index]
   const [searchParams] = useSearchParams()
   const fileParam = encodeURIComponent(searchParams.get('file') || '')
 
-  // Ocultar controles automáticamente después de 3 segundos
   useEffect(() => {
     if (!showControls) return
 
@@ -43,7 +49,6 @@ export default function Read() {
     return () => clearTimeout(timer)
   }, [showControls, index])
 
-  // Navegación con teclado
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       switch (e.key) {
@@ -80,14 +85,12 @@ export default function Read() {
   function goToNext() {
     if (index < images.length - 1) {
       setIndex(index + 1)
-      // setShowControls(true)
     }
   }
 
   function goToPrevious() {
     if (index > 0) {
       setIndex(index - 1)
-      // setShowControls(true)
     }
   }
 
@@ -113,7 +116,7 @@ export default function Read() {
 
     return `/read?file=${encodeURIComponent(
       `${nextFile.path}/${nextFile.name}`,
-    )}`
+    )}&index=0`
   }, [files, fileParam])
 
   const previousChapterLink = useMemo(() => {
@@ -138,7 +141,7 @@ export default function Read() {
 
     return `/read?file=${encodeURIComponent(
       `${previousFile.path}/${previousFile.name}`,
-    )}`
+    )}&index=0`
   }, [files, fileParam])
 
   function toggleFullscreen() {
@@ -186,7 +189,7 @@ export default function Read() {
 
   return (
     <div className="relative w-screen h-screen bg-black overflow-hidden">
-      {/* Imagen principal */}
+      {/* Main image */}
       <div
         className="w-full h-full flex items-center justify-center cursor-pointer"
         onClick={handleImageClick}
@@ -204,13 +207,13 @@ export default function Read() {
         />
       </div>
 
-      {/* Overlay de controles */}
+      {/* Overlay controls */}
       <div
         className={`absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/50 transition-opacity duration-300 pointer-events-none ${
           showControls ? 'opacity-100' : 'opacity-0'
         }`}
       >
-        {/* Barra superior */}
+        {/* Top bar */}
         <div
           className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/80 to-transparent pointer-events-auto"
           aria-label="Barra superior"
@@ -279,7 +282,7 @@ export default function Read() {
           </div>
         </div>
 
-        {/* Barra inferior */}
+        {/* Bottom bar */}
         <div
           className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black/80 to-transparent pointer-events-auto"
           aria-label="Barra inferior"
@@ -313,7 +316,7 @@ export default function Read() {
         </div>
       </div>
 
-      {/* Indicador de progreso */}
+      {/* Progress indicator */}
       <div className="absolute bottom-0 left-0 right-0 h-1 bg-pink-500/25">
         <div
           className="h-full bg-pink-500 transition-all duration-300"
