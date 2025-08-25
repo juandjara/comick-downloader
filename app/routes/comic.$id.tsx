@@ -1,4 +1,4 @@
-import Image, { ImageProps } from '@/components/Image'
+import Image from '@/components/Image'
 import {
   IconArrowBack,
   IconCheck,
@@ -7,7 +7,6 @@ import {
   IconLoading,
   IconReload,
 } from '@/components/icons'
-import { BASE_URL } from '@/config'
 import {
   type DownloadPayload,
   downloadQueue,
@@ -15,7 +14,6 @@ import {
   retryDownload,
   downloadChapter,
 } from '@/lib/download-queue.server'
-import { tryGetJSON } from '@/request'
 import { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node'
 import {
   Form,
@@ -32,58 +30,31 @@ import { useMemo } from 'react'
 import langOptions from '@/lib/langs.json'
 import { getFiles } from '@/lib/scan.queue'
 import useJobsRevalidator from '@/lib/useJobsRevalidator'
-
-type Comic = {
-  demographic: string
-  authors: { name: string }[]
-  chapters: Chapter[]
-  langList: string[]
-  comic: {
-    hid: string
-    title: string
-    year: number
-    parsed: string
-    md_covers: ImageProps[]
-    md_comic_md_genres: { md_genres: { slug: string; name: string } }[]
-  }
-}
-type Chapter = {
-  hid: string
-  chap: number
-  vol: number
-  title: string
-  group_name: string[]
-  updated_at: string
-}
-type FullChapter = Chapter & { md_images: ImageProps[] }
+import {
+  type Comic,
+  type Chapter,
+  getComic,
+  getComicChapters,
+} from '@/lib/content.server'
 
 const DEFAULT_LIMIT = 20
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
-  const id = params.id
+  const id = params.id!
   const headerLang = request.headers.get('Accept-Language') || ''
   const headerLangPart = headerLang.split(',')[0].split('-')[0]
   const sp = new URL(request.url).searchParams
   const lang = sp.get('lang') || '' || headerLangPart || 'en'
-
-  const remoteSP = new URLSearchParams()
-  remoteSP.set('lang', lang)
-  remoteSP.set('chap', sp.get('q') || '')
-  remoteSP.set('chap-order', sp.get('order') || '0')
-  remoteSP.set('page', sp.get('page') || '1')
-  remoteSP.set('limit', sp.get('limit') || String(DEFAULT_LIMIT))
+  const q = sp.get('q') || ''
+  const order = Number(sp.get('order'))
+  const page = Number(sp.get('page'))
+  const limit = Number(sp.get('limit'))
 
   const [files, jobs, comic, chapters] = await Promise.all([
     getFiles(),
     downloadQueue.getJobs(),
-    tryGetJSON<Comic, { error: true }>(
-      { error: true },
-      `${BASE_URL}/comic/${id}?tachiyomi=true`,
-    ),
-    tryGetJSON<{ chapters: FullChapter[] }>(
-      { chapters: [] },
-      `${BASE_URL}/comic/${id}/chapters?${remoteSP.toString()}`,
-    ),
+    getComic(id),
+    getComicChapters({ id, lang, q, order, page, limit }),
   ])
   return {
     files,

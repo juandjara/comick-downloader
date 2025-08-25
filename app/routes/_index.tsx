@@ -1,19 +1,14 @@
 import FSInfo from '@/components/FSInfo'
-import Image, { ImageProps } from '@/components/Image'
+import Image from '@/components/Image'
 import JobList from '@/components/JobList'
 import LastRead from '@/components/LastRead'
 import RecentQueries from '@/components/RecentQueries'
 import { IconClose, IconReload, IconSearch } from '@/components/icons'
-import { BASE_URL } from '@/config'
+import { search } from '@/lib/content.server'
 import { clearDownloadQueue, downloadQueue } from '@/lib/download-queue.server'
 import { clearLastRead, getLastRead } from '@/lib/lastread.server'
 import { getFiles, scanFiles, scanQueue } from '@/lib/scan.queue'
-import {
-  updateRecentQueries,
-  getRecentQueries,
-  clearRecentQueries,
-} from '@/lib/search.server'
-import { tryGetJSON, wrapData } from '@/request'
+import { getRecentQueries, clearRecentQueries } from '@/lib/search.server'
 import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
@@ -38,13 +33,6 @@ export const meta: MetaFunction = () => {
   ]
 }
 
-type SearchResult = {
-  hid: string
-  slug: string
-  title: string
-  md_covers: ImageProps[]
-}
-
 export async function loader({ request }: LoaderFunctionArgs) {
   const q = new URL(request.url).searchParams.get('q')
   const recent = await getRecentQueries()
@@ -52,21 +40,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const files = await getFiles()
   const jobs = await downloadQueue.getJobs()
   const scanJobs = await scanQueue.getJobs()
+  const results = await search(q)
 
-  let searchResults = wrapData([] as SearchResult[])
-
-  if (q) {
-    const [results] = await Promise.all([
-      tryGetJSON<SearchResult[]>(
-        [],
-        `${BASE_URL}/v1.0/search?q=${q}&tachiyomi=true`,
-      ),
-      updateRecentQueries(q),
-    ])
-    searchResults = results
-  }
-
-  return { lastRead, recent, jobs, files, results: searchResults, scanJobs }
+  return { lastRead, recent, jobs, files, results, scanJobs }
 }
 
 export async function action({ request }: ActionFunctionArgs) {
